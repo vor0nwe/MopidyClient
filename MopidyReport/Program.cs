@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -49,8 +50,10 @@ namespace MopidyReport
             }
             finally
             {
-                client.Close();
+                if (client.IsAlive)
+                    client.Close();
             }
+            Console.ReadKey(true);
         }
 
         private static ConsoleColor PrefixTime(string text, ConsoleColor color, ConsoleColor prefixColor = ConsoleColor.Yellow)
@@ -81,7 +84,9 @@ namespace MopidyReport
             try
             {
                 Console.ForegroundColor = ConsoleColor.Gray;
+
                 dynamic data = JsonConvert.DeserializeObject(e.Data);
+
                 if (data.result != null)
                 {
                     string result = JsonConvert.SerializeObject(data.result, Formatting.Indented);
