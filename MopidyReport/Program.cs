@@ -19,6 +19,7 @@ namespace MopidyReport
             client.OnMessage += Client_OnMessage;
             client.OnClose += Client_OnClose;
 
+            bool exitRequested = false;
             int msgID = 0;
             client.Connect();
             try
@@ -28,7 +29,10 @@ namespace MopidyReport
                     Console.ForegroundColor = ConsoleColor.White;
                     string msg = Console.ReadLine();
                     if (msg == "exit")
+                    {
+                        exitRequested = true;
                         break;
+                    }
                     var match = Regex.Match(msg, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
                     if (match.Success)
                     {
@@ -53,7 +57,12 @@ namespace MopidyReport
                 if (client.IsAlive)
                     client.Close();
             }
-            Console.ReadKey(true);
+            if (!exitRequested)
+            {
+                Console.Write("Press a key...");
+                Console.ReadKey(true);
+                Console.WriteLine();
+            }
         }
 
         private static ConsoleColor PrefixTime(string text, ConsoleColor color, ConsoleColor prefixColor = ConsoleColor.Yellow)
