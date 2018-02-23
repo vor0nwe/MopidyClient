@@ -36,6 +36,34 @@ namespace MopidyReport
                     string msg = Console.ReadLine();
                     if (msg == "exit")
                         break;
+                    var match = Regex.Match(msg, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
+                    if (match.Success)
+                    {
+                        dynamic data;
+                        if (match.Groups[2].Success)
+                        {
+                            dynamic parameters =  JsonConvert.DeserializeObject("[" + match.Groups[2].Value + "]");
+                            data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value, @params = parameters };
+                        }
+                        else
+                        {
+                            data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value };
+                        }
+
+
+                        //dynamic data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value, @params = new List<dynamic>() };
+                        //if (match.Groups[2].Success /*&& match.Groups[2].Value.Length > 0*/)
+                        //{
+                        //    string[] parameters = match.Groups[2].Value.Split(new char[] { ',' });
+                        //    if (parameters.Length == 1 && parameters[0] == "")
+                        //        data.@params.Add(null);
+                        //    else
+                        //        foreach (string param in parameters)
+                        //            data.@params.Add(param);
+                        //}
+                        msg = JsonConvert.SerializeObject(data);
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine(msg);
                     }
                     client.Send(msg);
                 }
