@@ -98,15 +98,14 @@ namespace MopidyReport
 
                 if (data.result != null)
                 {
-                    string result = JsonConvert.SerializeObject(data.result, Formatting.Indented);
+                    Console.WriteLine(JsonConvert.SerializeObject(data.result, Formatting.Indented));
                     string trackUri = null;
                     if (data.result.uri != null)
                         trackUri = data.result.uri;
                     else if (data.result.track?.uri != null)
                         trackUri = data.result.track.uri;
                     if (!string.IsNullOrEmpty(trackUri))
-                        result += "\n" + Uri.UnescapeDataString(trackUri);
-                    Console.WriteLine(result);
+                        Console.WriteLine(Uri.UnescapeDataString(trackUri));
                 }
                 else if (data.error != null)
                 {
