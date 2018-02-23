@@ -1,12 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-//using System.Net.WebSockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using WebSocketSharp;
 
 namespace MopidyReport
@@ -16,9 +11,6 @@ namespace MopidyReport
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
-            //var clientTask = Client();
-            //clientTask.Wait();
-            // Console.ReadLine();
 
             WebSocket client = new WebSocket("ws://192.168.178.13:6680/mopidy/ws");
             client.OnOpen += Client_OnOpen;
@@ -51,16 +43,6 @@ namespace MopidyReport
                         }
 
 
-                        //dynamic data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value, @params = new List<dynamic>() };
-                        //if (match.Groups[2].Success /*&& match.Groups[2].Value.Length > 0*/)
-                        //{
-                        //    string[] parameters = match.Groups[2].Value.Split(new char[] { ',' });
-                        //    if (parameters.Length == 1 && parameters[0] == "")
-                        //        data.@params.Add(null);
-                        //    else
-                        //        foreach (string param in parameters)
-                        //            data.@params.Add(param);
-                        //}
                         msg = JsonConvert.SerializeObject(data);
                         Console.ForegroundColor = ConsoleColor.DarkGray;
                         Console.WriteLine(msg);
@@ -145,39 +127,5 @@ namespace MopidyReport
             Console.ForegroundColor = OldColor;
         }
 
-        //static async Task Client()
-        //{
-        //    using (ClientWebSocket ws = new ClientWebSocket())
-        //    {
-        //        Uri serverUri = new Uri("ws://192.168.178.13:6680/mopidy/ws");
-        //        await ws.ConnectAsync(serverUri, CancellationToken.None);
-        //        while (true)
-        //        {
-        //            Console.ForegroundColor = ConsoleColor.Green;
-        //            Console.Write("Input message ('exit' to exit): ");
-        //            Console.ForegroundColor = ConsoleColor.White;
-        //            string msg = Console.ReadLine();
-        //            Console.ForegroundColor = ConsoleColor.Gray;
-        //            if (msg == "exit")
-        //            {
-        //                break;
-        //            }
-        //            ArraySegment<byte> bytesToSend = new ArraySegment<byte>(
-        //                Encoding.UTF8.GetBytes(msg));
-        //            await ws.SendAsync(
-        //                bytesToSend, WebSocketMessageType.Text,
-        //                true, CancellationToken.None);
-        //            ArraySegment<byte> bytesReceived = new ArraySegment<byte>(new byte[1024]);
-        //            WebSocketReceiveResult result = await ws.ReceiveAsync(
-        //                bytesReceived, CancellationToken.None);
-        //            Console.WriteLine(Encoding.UTF8.GetString(
-        //                bytesReceived.Array, 0, result.Count));
-        //            if (ws.State != WebSocketState.Open)
-        //            {
-        //                break;
-        //            }
-        //        }
-        //    }
-        //}
     }
 }
