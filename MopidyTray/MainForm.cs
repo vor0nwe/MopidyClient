@@ -59,15 +59,17 @@ namespace MopidyTray
                 if (data.@event != null)
                 {
                     string uri;
-                    Log(JsonConvert.SerializeObject(data.@event, Formatting.Indented), EventLogEntryType.SuccessAudit);
                     string eventName = data.@event;
+                    string extra = "";
                     switch (eventName)
                     {
                         case "mute_changed":
-                            SetProperty("mute", data.mute.ToString());
+                            extra = data.mute;
+                            SetProperty("mute", extra);
                             break;
                         case "playback_state_changed":
-                            SetProperty("state", data.new_state.ToString());
+                            extra = data.new_state;
+                            SetProperty("state", extra);
                             break;
                         case "playlist_changed":
                             // TODO
@@ -78,16 +80,19 @@ namespace MopidyTray
                         case "stream_title_changed":
                             string title = data.title.ToString();
                             SetProperty("stream_title", title);
+                            extra = title;
                             if (!string.IsNullOrWhiteSpace(title))
                             {
                                 if (title.Length > 63)
-                                    notifyIcon.Text = title.Substring(title.Length - 63, 63);
+                                    notifyIcon.Text = "…" + title.Substring(title.Length - 62, 62);
                                 else
                                     notifyIcon.Text = title;
                             }
                             break;
                         case "track_playback_ended":
                             SetProperty("track", "");
+                            extra = data.tl_track.track.uri;
+                            extra = Uri.UnescapeDataString(extra);
                             this.Invoke((MethodInvoker)delegate
                             {
                                 this.Text = Application.ProductName;
@@ -101,6 +106,7 @@ namespace MopidyTray
                             uri = data.tl_track.track.uri;
                             uri = Uri.UnescapeDataString(uri);
                             SetProperty("track", uri);
+                            extra = uri;
                             uri = uri.Substring(uri.IndexOf(':') + 1);
                             if (eventName != "track_playback_paused")
                             {
@@ -121,9 +127,11 @@ namespace MopidyTray
                             // TODO
                             break;
                         case "volume_changed":
-                            SetProperty("volume", data.volume.ToString());
+                            extra = data.volume;
+                            SetProperty("volume", extra);
                             break;
                     }
+                    Log(JsonConvert.SerializeObject(data.@event, Formatting.Indented) + " - " + extra, EventLogEntryType.SuccessAudit);
                 }
                 else if (data.error != null)
                 {
@@ -185,7 +193,7 @@ namespace MopidyTray
             int imageIndex = (int)Math.Round(Math.Log((int)type) / Math.Log(2));
             state.Invoke((MethodInvoker)delegate
             {
-                state.Items.Add(null, DateTime.Now.ToString("HH:mm:ss.fff"), imageIndex).SubItems.Add(message);
+                state.Items.Add(null, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"), imageIndex).SubItems.Add(message);
                 foreach (ColumnHeader column in state.Columns)
                     column.Width = -2;
             });
