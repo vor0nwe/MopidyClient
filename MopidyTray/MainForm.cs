@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -163,6 +164,30 @@ namespace MopidyTray
             notifyIcon.Icon = Properties.Resources.mopidy_icon_gray;
         }
 
+        private int msgID = 0;
+
+        private void buttonCommand_Click(object sender, EventArgs e)
+        {
+            var command = comboCommand.Text;
+            comboCommand.Items.Add(command);
+            var match = Regex.Match(command, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                dynamic data;
+                if (match.Groups[2].Success)
+                {
+                    dynamic parameters = JsonConvert.DeserializeObject("[" + match.Groups[2].Value + "]");
+                    data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value, @params = parameters };
+                }
+                else
+                {
+                    data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value };
+                }
+                command = JsonConvert.SerializeObject(data);
+            }
+            EventClient.Send(command);
+        }
+
         private void SetProperty(string key, string value)
         {
             state.Invoke((MethodInvoker)delegate
@@ -221,6 +246,7 @@ namespace MopidyTray
                 MessageBox.Show(state.FocusedItem.SubItems[state.FocusedItem.SubItems.Count - 1].Text, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
+
     }
 }
 
