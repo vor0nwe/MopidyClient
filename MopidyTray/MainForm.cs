@@ -192,7 +192,7 @@ namespace MopidyTray
             notifyIcon.Icon = Resources.mopidy_icon_gray;
         }
 
-        private int msgID = 0;
+        private int msgID = new Random(DateTime.Now.Millisecond).Next(10000);
 
         private void buttonCommand_Click(object sender, EventArgs e)
         {
