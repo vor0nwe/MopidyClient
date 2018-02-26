@@ -101,9 +101,13 @@ namespace MopidyTray
                             SetProperty("state", extra);
                             break;
                         case "playlist_changed":
+                            extra = data.playlist.uri;
+                            extra = Uri.UnescapeDataString(extra);
                             // TODO
                             break;
                         case "seeked":
+                            int TimePosition = data.time_position;
+                            extra = TimeSpan.FromMilliseconds(TimePosition).ToString(@"hh\:mm\:ss");
                             // TODO
                             break;
                         case "stream_title_changed":
