@@ -1,7 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using MopidyTray.Properties;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -27,7 +29,7 @@ namespace MopidyTray
         private void MainForm_Load(object sender, EventArgs e)
         {
             notifyIcon.Text = this.Text;
-            notifyIcon.Icon = Properties.Resources.mopidy_icon_gray;
+            notifyIcon.Icon = Resources.mopidy_icon_gray;
             notifyIcon.Visible = true;
 
             imageList.Images.Add(SystemIcons.Error);
@@ -42,6 +44,24 @@ namespace MopidyTray
             EventClient.OnError += Client_OnError;
             EventClient.OnMessage += Client_OnMessage;
             EventClient.ConnectAsync();
+
+            var prop = new SettingsProperty("Commands")
+            {
+                PropertyType = typeof(string),
+                DefaultValue = Settings.Default.Command,
+                Provider = Settings.Default.Providers["LocalFileSettingsProvider"],
+                SerializeAs = SettingsSerializeAs.String
+            };
+            prop.Attributes.Add(typeof(UserScopedSettingAttribute), new UserScopedSettingAttribute());
+            Settings.Default.Properties.Add(prop);
+            Settings.Default.Reload();
+
+            string Commands = (string)Settings.Default["Commands"];
+            if (!string.IsNullOrWhiteSpace(Commands))
+                foreach (string Command in Commands.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    comboCommand.Items.Add(Command);
+                }
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -49,6 +69,14 @@ namespace MopidyTray
             if (!EventClient.IsAlive)
                 EventClient.Close();
             notifyIcon.Visible = false;
+            var Commands = new List<string>();
+            foreach(string Item in comboCommand.Items)
+            {
+                Commands.Add(Item);
+            }
+            Commands.Sort();
+            Settings.Default["Commands"] = string.Join(Environment.NewLine, Commands);
+            Settings.Default.Save();
         }
 
         private void Client_OnMessage(object sender, WebSocketSharp.MessageEventArgs e)
@@ -156,21 +184,22 @@ namespace MopidyTray
 
         private void Client_OnOpen(object sender, EventArgs e)
         {
-            notifyIcon.Icon = Properties.Resources.mopidy_icon;
+            notifyIcon.Icon = Resources.mopidy_icon;
         }
 
         private void Client_OnClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
-            notifyIcon.Icon = Properties.Resources.mopidy_icon_gray;
+            notifyIcon.Icon = Resources.mopidy_icon_gray;
         }
 
         private int msgID = 0;
 
         private void buttonCommand_Click(object sender, EventArgs e)
         {
-            var command = comboCommand.Text;
-            comboCommand.Items.Add(command);
-            var match = Regex.Match(command, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
+            var Command = comboCommand.Text;
+            if (!comboCommand.Items.Contains(Command))
+                comboCommand.Items.Insert(0, Command);
+            var match = Regex.Match(Command, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
             if (match.Success)
             {
                 dynamic data;
@@ -183,9 +212,9 @@ namespace MopidyTray
                 {
                     data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value };
                 }
-                command = JsonConvert.SerializeObject(data);
+                Command = JsonConvert.SerializeObject(data);
             }
-            EventClient.Send(command);
+            EventClient.Send(Command);
         }
 
         private void SetProperty(string key, string value)
