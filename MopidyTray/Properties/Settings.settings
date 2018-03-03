@@ -8,5 +8,11 @@
     <Setting Name="Command" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="HostUri" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ws://localhost:6680/mopidy/ws</Value>
+    </Setting>
+    <Setting Name="URIConfirmed" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

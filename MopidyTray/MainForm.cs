@@ -39,7 +39,41 @@ namespace MopidyTray
             imageList.Images.Add(SystemIcons.Application);
             imageList.Images.Add(SystemIcons.Question);
 
-            EventClient = new WebSocketSharp.WebSocket("ws://192.168.178.13:6680/mopidy/ws");
+            if (!Settings.Default.URIConfirmed)
+            {
+                var InputBox = new Form
+                {
+                    Width = 500,
+                    Height = 150,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    Text = this.Text,
+                    StartPosition = FormStartPosition.CenterParent,
+                    MinimizeBox = false,
+                    MaximizeBox = false,
+                    Font = this.Font
+                };
+                Label textLabel = new Label() { Left = 10, Top = 10, Text = "Mopidy URI:" };
+                TextBox textBox = new TextBox() { Left = 10, Top = textLabel.Bottom + 10, Width = InputBox.ClientSize.Width - 20, Text = Settings.Default.HostUri };
+                Button confirmation = new Button() { Text = "OK", Left = InputBox.ClientSize.Width - 220, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.OK };
+                Button cancel = new Button() { Text = "Cancel", Left = InputBox.ClientSize.Width - 110, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.Cancel };
+                confirmation.Click += (lsender, le) => { InputBox.Close(); };
+                cancel.Click += (lsender, le) => { InputBox.Close(); };
+                InputBox.Controls.Add(textBox);
+                InputBox.Controls.Add(confirmation);
+                InputBox.Controls.Add(cancel);
+                InputBox.Controls.Add(textLabel);
+                InputBox.AcceptButton = confirmation;
+                InputBox.CancelButton = cancel;
+
+                if (InputBox.ShowDialog() == DialogResult.OK)
+                {
+                    Settings.Default.HostUri = textBox.Text;
+                    Settings.Default.URIConfirmed = true;
+                    Settings.Default.Save();
+                }
+            }
+
+            EventClient = new WebSocketSharp.WebSocket(Settings.Default.HostUri);
             EventClient.OnOpen += Client_OnOpen;
             EventClient.OnClose += Client_OnClose;
             EventClient.OnError += Client_OnError;
@@ -204,18 +238,19 @@ namespace MopidyTray
 
         private void Client_OnOpen(object sender, EventArgs e)
         {
-            //notifyIcon.Icon = Resources.mopidy_icon;
+            SetProperty("Host", EventClient.Url.ToString());
             this.Invoke((MethodInvoker)delegate
             {
+                //notifyIcon.Icon = Resources.mopidy_icon;
                 this.ModifyTrayIcon(this.Text, Resources.mopidy_icon);
             });
         }
 
         private void Client_OnClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
-            //notifyIcon.Icon = Resources.mopidy_icon_gray;
             this.Invoke((MethodInvoker)delegate
             {
+                //notifyIcon.Icon = Resources.mopidy_icon_gray;
                 this.ModifyTrayIcon(this.Text, Resources.mopidy_icon_gray);
             });
         }
@@ -268,6 +303,8 @@ namespace MopidyTray
                         Item.SubItems[Item.SubItems.Count - 1].Text = value;
                     }
                 }
+                foreach (ColumnHeader column in state.Columns)
+                    column.Width = -2;
             });
         }
 

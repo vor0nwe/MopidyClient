@@ -46,5 +46,29 @@ namespace MopidyTray.Properties {
                 this["Command"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ws://localhost:6680/mopidy/ws")]
+        public string HostUri {
+            get {
+                return ((string)(this["HostUri"]));
+            }
+            set {
+                this["HostUri"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool URIConfirmed {
+            get {
+                return ((bool)(this["URIConfirmed"]));
+            }
+            set {
+                this["URIConfirmed"] = value;
+            }
+        }
     }
 }
