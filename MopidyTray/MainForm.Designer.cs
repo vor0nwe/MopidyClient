@@ -39,6 +39,12 @@
             this.buttonCommand = new System.Windows.Forms.Button();
             this.comboCommand = new System.Windows.Forms.ComboBox();
             this.checkShowNotifications = new System.Windows.Forms.CheckBox();
+            this.ButtonPanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.PrevButton = new System.Windows.Forms.Button();
+            this.PlayButton = new System.Windows.Forms.Button();
+            this.PauseButton = new System.Windows.Forms.Button();
+            this.NextButton = new System.Windows.Forms.Button();
+            this.ButtonPanel.SuspendLayout();
             this.SuspendLayout();
             // 
             // notifyIcon
@@ -58,7 +64,7 @@
             this.state.FullRowSelect = true;
             this.state.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.state.Location = new System.Drawing.Point(16, 19);
-            this.state.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.state.Margin = new System.Windows.Forms.Padding(4);
             this.state.Name = "state";
             this.state.Size = new System.Drawing.Size(928, 637);
             this.state.SmallImageList = this.imageList;
@@ -99,7 +105,7 @@
             // 
             this.buttonCommand.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonCommand.Location = new System.Drawing.Point(668, 667);
-            this.buttonCommand.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.buttonCommand.Margin = new System.Windows.Forms.Padding(4);
             this.buttonCommand.Name = "buttonCommand";
             this.buttonCommand.Size = new System.Drawing.Size(103, 36);
             this.buttonCommand.TabIndex = 2;
@@ -114,7 +120,7 @@
             this.comboCommand.DataBindings.Add(new System.Windows.Forms.Binding("Text", global::MopidyTray.Properties.Settings.Default, "Command", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.comboCommand.FormattingEnabled = true;
             this.comboCommand.Location = new System.Drawing.Point(115, 669);
-            this.comboCommand.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.comboCommand.Margin = new System.Windows.Forms.Padding(4);
             this.comboCommand.Name = "comboCommand";
             this.comboCommand.Size = new System.Drawing.Size(544, 28);
             this.comboCommand.TabIndex = 1;
@@ -127,12 +133,79 @@
             this.checkShowNotifications.Checked = global::MopidyTray.Properties.Settings.Default.ShowNotifications;
             this.checkShowNotifications.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::MopidyTray.Properties.Settings.Default, "ShowNotifications", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.checkShowNotifications.Location = new System.Drawing.Point(796, 676);
-            this.checkShowNotifications.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkShowNotifications.Margin = new System.Windows.Forms.Padding(4);
             this.checkShowNotifications.Name = "checkShowNotifications";
             this.checkShowNotifications.Size = new System.Drawing.Size(150, 24);
             this.checkShowNotifications.TabIndex = 3;
             this.checkShowNotifications.Text = "Show notifications";
             this.checkShowNotifications.UseVisualStyleBackColor = true;
+            // 
+            // ButtonPanel
+            // 
+            this.ButtonPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.ButtonPanel.AutoSize = true;
+            this.ButtonPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.ButtonPanel.Controls.Add(this.PrevButton);
+            this.ButtonPanel.Controls.Add(this.PlayButton);
+            this.ButtonPanel.Controls.Add(this.PauseButton);
+            this.ButtonPanel.Controls.Add(this.NextButton);
+            this.ButtonPanel.Enabled = false;
+            this.ButtonPanel.Location = new System.Drawing.Point(620, 11);
+            this.ButtonPanel.Name = "ButtonPanel";
+            this.ButtonPanel.Size = new System.Drawing.Size(324, 54);
+            this.ButtonPanel.TabIndex = 5;
+            // 
+            // PrevButton
+            // 
+            this.PrevButton.AccessibleDescription = "Go to the previous track";
+            this.PrevButton.AccessibleName = "Previous";
+            this.PrevButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.PrevButton.Location = new System.Drawing.Point(3, 3);
+            this.PrevButton.Name = "PrevButton";
+            this.PrevButton.Size = new System.Drawing.Size(75, 48);
+            this.PrevButton.TabIndex = 0;
+            this.PrevButton.Text = "◀▮";
+            this.PrevButton.UseVisualStyleBackColor = true;
+            this.PrevButton.Click += new System.EventHandler(this.PrevButton_Click);
+            // 
+            // PlayButton
+            // 
+            this.PlayButton.AccessibleDescription = "Play";
+            this.PlayButton.AccessibleName = "Play";
+            this.PlayButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.PlayButton.Location = new System.Drawing.Point(84, 3);
+            this.PlayButton.Name = "PlayButton";
+            this.PlayButton.Size = new System.Drawing.Size(75, 48);
+            this.PlayButton.TabIndex = 1;
+            this.PlayButton.Text = "▶";
+            this.PlayButton.UseVisualStyleBackColor = true;
+            this.PlayButton.Click += new System.EventHandler(this.PlayButton_Click);
+            // 
+            // PauseButton
+            // 
+            this.PauseButton.AccessibleDescription = "Pause";
+            this.PauseButton.AccessibleName = "Pause";
+            this.PauseButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.PauseButton.Location = new System.Drawing.Point(165, 3);
+            this.PauseButton.Name = "PauseButton";
+            this.PauseButton.Size = new System.Drawing.Size(75, 48);
+            this.PauseButton.TabIndex = 3;
+            this.PauseButton.Text = "▮▮";
+            this.PauseButton.UseVisualStyleBackColor = true;
+            this.PauseButton.Click += new System.EventHandler(this.PauseButton_Click);
+            // 
+            // NextButton
+            // 
+            this.NextButton.AccessibleDescription = "Go to the next track";
+            this.NextButton.AccessibleName = "Next";
+            this.NextButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.NextButton.Location = new System.Drawing.Point(246, 3);
+            this.NextButton.Name = "NextButton";
+            this.NextButton.Size = new System.Drawing.Size(75, 48);
+            this.NextButton.TabIndex = 2;
+            this.NextButton.Text = "▮▶";
+            this.NextButton.UseVisualStyleBackColor = true;
+            this.NextButton.Click += new System.EventHandler(this.NextButton_Click);
             // 
             // MainForm
             // 
@@ -140,6 +213,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(962, 716);
+            this.Controls.Add(this.ButtonPanel);
             this.Controls.Add(this.comboCommand);
             this.Controls.Add(this.buttonCommand);
             this.Controls.Add(this.labelCommand);
@@ -147,11 +221,12 @@
             this.Controls.Add(this.state);
             this.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "MainForm";
             this.Text = "Mopidy client";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.MainForm_FormClosed);
             this.Load += new System.EventHandler(this.MainForm_Load);
+            this.ButtonPanel.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -168,6 +243,11 @@
         private System.Windows.Forms.Label labelCommand;
         private System.Windows.Forms.Button buttonCommand;
         private System.Windows.Forms.ComboBox comboCommand;
+        private System.Windows.Forms.FlowLayoutPanel ButtonPanel;
+        private System.Windows.Forms.Button PrevButton;
+        private System.Windows.Forms.Button PlayButton;
+        private System.Windows.Forms.Button NextButton;
+        private System.Windows.Forms.Button PauseButton;
     }
 }
 

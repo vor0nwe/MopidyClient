@@ -135,6 +135,20 @@ namespace MopidyTray
                         case "playback_state_changed":
                             extra = data.new_state;
                             SetProperty("state", extra);
+                            this.Invoke((MethodInvoker)delegate
+                            {
+                                switch (extra)
+                                {
+                                    case "playing":
+                                        PauseButton.Enabled = true;
+                                        PlayButton.Enabled = false;
+                                        break;
+                                    default:
+                                        PlayButton.Enabled = true;
+                                        PauseButton.Enabled = false;
+                                        break;
+                                }
+                            });
                             break;
                         case "playlist_changed":
                             extra = data.playlist.uri;
@@ -234,6 +248,7 @@ namespace MopidyTray
             SetProperty("Host", EventClient.Url.ToString());
             this.Invoke((MethodInvoker)delegate
             {
+                ButtonPanel.Enabled = true;
                 trayIcon.Icon = Resources.mopidy_icon;
             });
         }
@@ -242,6 +257,7 @@ namespace MopidyTray
         {
             this.Invoke((MethodInvoker)delegate
             {
+                ButtonPanel.Enabled = false;
                 trayIcon.Icon = Resources.mopidy_icon_gray;
             });
         }
@@ -270,6 +286,16 @@ namespace MopidyTray
             }
             EventClient.Send(Command);
             Log(Command, EventLogEntryType.Information);
+        }
+
+        private int SendCommand(string command, params string[] parameters)
+        {
+            var ID = ++msgID;
+            dynamic Data = new { jsonrpc = "2.0", id = ID, method = command, @params = parameters };
+            var Command = JsonConvert.SerializeObject(Data);
+            EventClient.Send(Command);
+            Log(Command, EventLogEntryType.Information);
+            return ID;
         }
 
         private void SetProperty(string key, string value)
@@ -382,6 +408,25 @@ namespace MopidyTray
             }
         }
 
+        private void NextButton_Click(object sender, EventArgs e)
+        {
+            SendCommand("core.playback.next");
+        }
+
+        private void PrevButton_Click(object sender, EventArgs e)
+        {
+            SendCommand("core.playback.previous");
+        }
+
+        private void PauseButton_Click(object sender, EventArgs e)
+        {
+            SendCommand("core.playback.pause");
+        }
+
+        private void PlayButton_Click(object sender, EventArgs e)
+        {
+            SendCommand("core.playback.play");
+        }
     }
 }
 
@@ -564,7 +609,7 @@ class TrayIcon : IDisposable
     private const int NIIF_RESPECT_QUIET_TIME = 0x80;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct NOTIFYICONDATA
+    private struct NOTIFYICONDATA
     {
         public int cbSize /*= Marshal.SizeOf(typeof(NOTIFYICONDATA))*/;
         public IntPtr hWnd;
