@@ -427,6 +427,28 @@ namespace MopidyTray
         {
             SendCommand("core.playback.play");
         }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.MediaNextTrack:
+                    NextButton.PerformClick();
+                    e.SuppressKeyPress = true;
+                    break;
+                case Keys.MediaPlayPause:
+                    if (PlayButton.Enabled)
+                        PlayButton.PerformClick();
+                    else
+                        PauseButton.PerformClick();
+                    e.SuppressKeyPress = true;
+                    break;
+                case Keys.MediaPreviousTrack:
+                    PrevButton.PerformClick();
+                    e.SuppressKeyPress = true;
+                    break;
+            }
+        }
     }
 }
 
