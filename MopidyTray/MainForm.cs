@@ -320,7 +320,7 @@ namespace MopidyTray
                 title = track.uri;
                 title = Uri.UnescapeDataString(title);
             }
-            string result = "";
+            string Result = "";
             if (track.artists != null)
             {
                 var Artists = new List<string>();
@@ -329,11 +329,33 @@ namespace MopidyTray
                     Artists.Add(artist.name.ToString());
                 }
                 if (Artists.Count > 0)
-                    result = string.Join(", ", Artists);
+                    Result = string.Join(", ", Artists);
             }
-            if (track.album.name != null)
-                result += Environment.NewLine + "(" + track.album.name + ")";
-            return result.Trim();
+            if (track.album != null && track.album.name != null)
+                Result += Environment.NewLine + "(" + track.album.name + ")";
+            if (string.IsNullOrWhiteSpace(Result))
+            {
+                Result = track.uri;
+                Result = Uri.UnescapeDataString(Result);
+                if (title == Result)
+                {
+                    // Strip the URI schema
+                    int pos = Result.IndexOf(':');
+                    if (pos > -1)
+                    {
+                        Result = Result.Substring(pos + 1);
+                        title = Result;
+                    }
+                    // try to split the file name
+                    pos = Result.LastIndexOf('/');
+                    if (pos > -1)
+                    {
+                        title = Result.Substring(pos + 1);
+                        Result = Result.Substring(0, pos);
+                    }
+                }
+            }
+            return Result.Trim();
         }
 
         private void notifyIcon_MouseClick(object sender, MouseEventArgs e)
