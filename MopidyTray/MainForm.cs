@@ -187,8 +187,8 @@ namespace MopidyTray
                             {
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    string Description = DescribeTrack(data.tl_track.track, out string Artists);
-                                    trayIcon.ShowNotification(Artists, Description, MessageBoxIcon.None, true);
+                                    string Description = DescribeTrack(data.tl_track.track, out string Title);
+                                    trayIcon.ShowNotification(Title, Description, MessageBoxIcon.None, true);
                                 });
                             }
                             this.Invoke((MethodInvoker)delegate
@@ -310,9 +310,17 @@ namespace MopidyTray
             });
         }
 
-        private string DescribeTrack(dynamic track, out string artists)
+        private string DescribeTrack(dynamic track, out string title)
         {
-            artists = null;
+            title = null;
+            if (track.name != null)
+                title = track.name;
+            else
+            {
+                title = track.uri;
+                title = Uri.UnescapeDataString(title);
+            }
+            string result = "";
             if (track.artists != null)
             {
                 var Artists = new List<string>();
@@ -321,23 +329,16 @@ namespace MopidyTray
                     Artists.Add(artist.name.ToString());
                 }
                 if (Artists.Count > 0)
-                    artists = string.Join(", ", Artists);
-            }
-            string result;
-            if (track.name != null)
-                result = track.name;
-            else
-            {
-                result = track.uri;
-                result = Uri.UnescapeDataString(result);
+                    result = string.Join(", ", Artists);
             }
             if (track.album.name != null)
                 result += Environment.NewLine + "(" + track.album.name + ")";
-            return result;
+            return result.Trim();
         }
 
         private void notifyIcon_MouseClick(object sender, MouseEventArgs e)
         {
+            // TODO: implement this event in TrayIcon
             if (this.Visible)
             {
                 this.WindowState = FormWindowState.Minimized;
