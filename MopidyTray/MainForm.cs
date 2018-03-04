@@ -25,13 +25,11 @@ namespace MopidyTray
         }
 
         public WebSocketSharp.WebSocket EventClient;
+        private TrayIcon trayIcon;
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            //notifyIcon.Text = this.Text;
-            //notifyIcon.Icon = Resources.mopidy_icon_gray;
-            //notifyIcon.Visible = true;
-            this.ShowTrayIcon(this.Text, Resources.mopidy_icon_gray);
+            trayIcon = new TrayIcon(this, this.Text, Resources.mopidy_icon_gray);
 
             imageList.Images.Add(SystemIcons.Error);
             imageList.Images.Add(SystemIcons.Warning);
@@ -103,8 +101,10 @@ namespace MopidyTray
         {
             if (!EventClient.IsAlive)
                 EventClient.Close();
-            //notifyIcon.Visible = false;
-            this.HideTrayIcon();
+            
+            trayIcon.Dispose();
+            trayIcon = null;
+
             var Commands = new List<string>();
             foreach (string Item in comboCommand.Items)
             {
@@ -155,11 +155,9 @@ namespace MopidyTray
                                 this.Invoke((MethodInvoker)delegate
                                 {
                                     if (title.Length > 63)
-                                        //notifyIcon.Text = "…" + title.Substring(title.Length - 62, 62);
-                                        this.ModifyTrayIcon("…" + title.Substring(title.Length - 62, 62));
+                                        trayIcon.Text = "…" + title.Substring(title.Length - 62, 62);
                                     else
-                                        //notifyIcon.Text = title;
-                                        this.ModifyTrayIcon(title);
+                                        trayIcon.Text = title;
                                 });
                             }
                             break;
@@ -172,8 +170,7 @@ namespace MopidyTray
                                 this.Text = Application.ProductName;
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    //notifyIcon.Text = this.Text;
-                                    this.ModifyTrayIcon(this.Text);
+                                    trayIcon.Text = this.Text;
                                 });
                             });
                             // TODO
@@ -190,10 +187,8 @@ namespace MopidyTray
                             {
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    //notifyIcon.BalloonTipIcon = ToolTipIcon.None;
-                                    //notifyIcon.BalloonTipText = uri;
-                                    //notifyIcon.ShowBalloonTip(3000);
-                                    this.ShowTrayNotification(Application.ProductName, uri, MessageBoxIcon.None, true);
+                                    string Description = DescribeTrack(data.tl_track.track, out string Artists);
+                                    trayIcon.ShowNotification(Artists, Description, MessageBoxIcon.None, true);
                                 });
                             }
                             this.Invoke((MethodInvoker)delegate
@@ -201,11 +196,9 @@ namespace MopidyTray
                                 this.Text = uri + " - " + Application.ProductName;
                                 uri = Path.ChangeExtension(uri, "").TrimEnd('.');
                                 if (uri.Length > 63)
-                                    //notifyIcon.Text = "…" + uri.Substring(uri.Length - 62, 62);
-                                    this.ModifyTrayIcon("…" + uri.Substring(uri.Length - 62, 62));
+                                    trayIcon.Text = "…" + uri.Substring(uri.Length - 62, 62);
                                 else
-                                    //notifyIcon.Text = uri;
-                                    this.ModifyTrayIcon(uri);
+                                    trayIcon.Text = uri;
                             });
                             // TODO
                             break;
@@ -241,8 +234,7 @@ namespace MopidyTray
             SetProperty("Host", EventClient.Url.ToString());
             this.Invoke((MethodInvoker)delegate
             {
-                //notifyIcon.Icon = Resources.mopidy_icon;
-                this.ModifyTrayIcon(this.Text, Resources.mopidy_icon);
+                trayIcon.Icon = Resources.mopidy_icon;
             });
         }
 
@@ -250,8 +242,7 @@ namespace MopidyTray
         {
             this.Invoke((MethodInvoker)delegate
             {
-                //notifyIcon.Icon = Resources.mopidy_icon_gray;
-                this.ModifyTrayIcon(this.Text, Resources.mopidy_icon_gray);
+                trayIcon.Icon = Resources.mopidy_icon_gray;
             });
         }
 
@@ -319,6 +310,32 @@ namespace MopidyTray
             });
         }
 
+        private string DescribeTrack(dynamic track, out string artists)
+        {
+            artists = null;
+            if (track.artists != null)
+            {
+                var Artists = new List<string>();
+                foreach (dynamic artist in track.artists)
+                {
+                    Artists.Add(artist.name.ToString());
+                }
+                if (Artists.Count > 0)
+                    artists = string.Join(", ", Artists);
+            }
+            string result;
+            if (track.name != null)
+                result = track.name;
+            else
+            {
+                result = track.uri;
+                result = Uri.UnescapeDataString(result);
+            }
+            if (track.album.name != null)
+                result += Environment.NewLine + "(" + track.album.name + ")";
+            return result;
+        }
+
         private void notifyIcon_MouseClick(object sender, MouseEventArgs e)
         {
             if (this.Visible)
@@ -345,174 +362,184 @@ namespace MopidyTray
     }
 }
 
-namespace System.Windows.Forms
+class TrayIcon : IDisposable
 {
+    private NOTIFYICONDATA _nid;
+    private Form _parent;
+    private Icon _icon;
 
-    public static class Extensions
+    public TrayIcon(Form parent, string text, Icon icon = null)
     {
-        [DllImport("user32.dll")]
-        private static extern int ShowWindow(IntPtr hWnd, uint Msg);
-
-        private const uint SW_RESTORE = 0x09;
-
-        public static void Restore(this Form form)
+        _parent = parent;
+        _icon = icon;
+        _nid = new NOTIFYICONDATA
         {
-            if (form.WindowState == FormWindowState.Minimized)
-            {
-                ShowWindow(form.Handle, SW_RESTORE);
-            }
-        }
-
-
-        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-        private static extern bool Shell_NotifyIcon(uint message, ref NOTIFYICONDATA data);
-
-        private const uint NIM_ADD = 0x00;
-        private const uint NIM_MODIFY = 0x01;
-        private const uint NIM_DELETE = 0x02;
-        private const uint NIM_SETFOCUS = 0x03;
-        private const uint NIM_SETVERSION = 0x04;
-
-        private const int NIF_MESSAGE = 0x01;
-        private const int NIF_ICON = 0x02;
-        private const int NIF_TIP = 0x04;
-        private const int NIF_STATE = 0x08;
-        private const int NIF_INFO = 0x10;
-        private const int NIF_GUID = 0x20;
-        private const int NIF_REALTIME = 0x40;
-        private const int NIF_SHOWTIP = 0x80;
-
-        private const int NOTIFYICON_VERSION_4 = 4;
-
-        private const int NIIF_NONE = 0x00;
-        private const int NIIF_INFO = 0x01;
-        private const int NIIF_WARNING = 0x02;
-        private const int NIIF_ERROR = 0x03;
-        private const int NIIF_USER = 0x04;
-
-        private const int NIIF_NOSOUND = 0x10;
-        private const int NIIF_LARGE_ICON = 0x20;
-        private const int NIIF_RESPECT_QUIET_TIME = 0x80;
-
-        private static uint IconID;
-
-        public static void ShowTrayIcon(this Form form, string tip, Icon icon = null)
-        {
-            var nid = new NOTIFYICONDATA
-            {
-                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
-                hWnd = form.Handle,
-                uID = 0,
-                uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP,
-                hIcon = (icon == null ? form.Icon.Handle : icon.Handle),
-                szTip = tip,
-                uTimeoutOrVersion = NOTIFYICON_VERSION_4
-            };
-            Shell_NotifyIcon(NIM_SETVERSION, ref nid);
-            Shell_NotifyIcon(NIM_ADD, ref nid);
-            IconID = nid.uID;
-        }
-
-        public static void ModifyTrayIcon(this Form form, string tip, Icon icon = null)
-        {
-            uint Flags = NIF_TIP | NIF_SHOWTIP;
-            if (icon != null)
-                Flags |= NIF_ICON;
-            var nid = new NOTIFYICONDATA
-            {
-                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
-                hWnd = form.Handle,
-                uID = IconID,
-                uFlags = Flags,
-                hIcon = (icon == null ? IntPtr.Zero : icon.Handle),
-                szTip = tip,
-                uTimeoutOrVersion = NOTIFYICON_VERSION_4
-            };
-            Shell_NotifyIcon(NIM_MODIFY, ref nid);
-        }
-
-        public static void HideTrayIcon(this Form form)
-        {
-            var nid = new NOTIFYICONDATA
-            {
-                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
-                hWnd = form.Handle,
-                uID = IconID,
-                uFlags = NIF_ICON | NIF_SHOWTIP,
-                hIcon = form.Icon.Handle,
-                szTip = null,
-                dwState = 0,
-                dwStateMask = 0,
-                szInfo = null,
-                szInfoTitle = null
-            };
-            Shell_NotifyIcon(NIM_DELETE, ref nid);
-        }
-
-        public static void ShowTrayNotification(this Form form, string title, string text, MessageBoxIcon icon = MessageBoxIcon.None, bool silent = false)
-        {
-            uint InfoFlags = NIIF_NONE;
-            switch(icon)
-            {
-                case MessageBoxIcon.None:
-                    InfoFlags = NIIF_NONE;
-                    break;
-                case MessageBoxIcon.Information:
-                    InfoFlags = NIIF_INFO;
-                    break;
-                case MessageBoxIcon.Warning:
-                    InfoFlags = NIIF_WARNING;
-                    break;
-                case MessageBoxIcon.Error:
-                    InfoFlags = NIIF_ERROR;
-                    break;
-            }
-            if (silent)
-                InfoFlags |= NIIF_NOSOUND;
-
-            var nid = new NOTIFYICONDATA
-            {
-                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
-                hWnd = form.Handle,
-                uID = IconID,
-                uFlags = NIF_ICON | NIF_INFO,
-                hIcon = form.Icon.Handle,
-                dwState = 0,
-                dwStateMask = 0,
-                szInfo = text,
-                szInfoTitle = title,
-                dwInfoFlags = InfoFlags
-            };
-            Shell_NotifyIcon(NIM_MODIFY, ref nid);
-        }
-        public static void ShowTrayNotification(this Form form, string title, string text, Icon icon, bool silent = false)
-        {
-            uint InfoFlags = NIIF_USER;
-            if (silent)
-                InfoFlags |= NIIF_NOSOUND;
-            var nid = new NOTIFYICONDATA
-            {
-                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
-                hWnd = form.Handle,
-                uID = IconID,
-                uFlags = NIF_ICON | NIF_INFO,
-                hIcon = form.Icon.Handle,
-                dwState = 0,
-                dwStateMask = 0,
-                szInfo = text,
-                szInfoTitle = title,
-                dwInfoFlags = InfoFlags,
-                hBalloonIcon = icon.Handle
-            };
-            Shell_NotifyIcon(NIM_MODIFY, ref nid);
-        }
-
-
-
+            cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
+            hWnd = parent.Handle,
+            uID = 0,
+            uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP,
+            hIcon = (_icon ?? parent.Icon).Handle,
+            szTip = text ?? parent.Text,
+            dwState = 0,
+            dwStateMask = NIS_HIDDEN,
+            uTimeoutOrVersion = NOTIFYICON_VERSION_4
+        };
+        Shell_NotifyIcon(NIM_SETVERSION, ref _nid);
+        Shell_NotifyIcon(NIM_ADD, ref _nid);
     }
 
-    //[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    //class NOTIFYICONDATA
+    public Icon Icon
+    {
+        get
+        {
+            return _icon;
+        }
+        set
+        {
+            _icon = value;
+            _nid.hIcon = (_icon ?? _parent.Icon).Handle;
+            Shell_NotifyIcon(NIM_MODIFY, ref _nid);
+        }
+    }
+
+    public string Text
+    {
+        get
+        {
+            return _nid.szTip;
+        }
+        set
+        {
+            _nid.szTip = value;
+            Shell_NotifyIcon(NIM_MODIFY, ref _nid);
+        }
+    }
+
+    public bool Visible
+    {
+        get
+        {
+            return (_nid.dwState & NIS_HIDDEN) == 0;
+        }
+        set
+        {
+            if (value)
+                _nid.dwState &= ~NIS_HIDDEN;
+            else
+                _nid.dwState |= NIS_HIDDEN;
+            Shell_NotifyIcon(NIM_MODIFY, ref _nid);
+        }
+    }
+
+    public void ShowNotification(string title, string text, MessageBoxIcon icon, bool silent = false)
+    {
+        uint Flags = NIIF_NONE;
+        switch (icon)
+        {
+            case MessageBoxIcon.None:
+                Flags = NIIF_NONE;
+                break;
+            case MessageBoxIcon.Information:
+                Flags = NIIF_INFO;
+                break;
+            case MessageBoxIcon.Warning:
+                Flags = NIIF_WARNING;
+                break;
+            case MessageBoxIcon.Error:
+                Flags = NIIF_ERROR;
+                break;
+        }
+        if (silent)
+            Flags |= NIIF_NOSOUND;
+        _nid.hBalloonIcon = IntPtr.Zero;
+        ShowNotification(title, text, Flags);
+    }
+    public void ShowNotification(string title, string text, Icon icon, bool silent = false)
+    {
+        uint Flags = NIIF_USER;
+        if (silent)
+            Flags |= NIIF_NOSOUND;
+        _nid.hBalloonIcon = (icon ?? _parent.Icon).Handle;
+        ShowNotification(title, text, Flags);
+    }
+    public void ShowNotification(string title, string text, uint flags = NIIF_NONE)
+    {
+        _nid.uFlags |= NIF_INFO;
+        _nid.szInfoTitle = title;
+        _nid.szInfo = text;
+        _nid.dwInfoFlags = flags;
+        Shell_NotifyIcon(NIM_MODIFY, ref _nid);
+        _nid.uFlags &= ~NIF_INFO;
+    }
+
+    #region IDisposable Support
+    private bool disposedValue = false; // To detect redundant calls
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects).
+            }
+
+            // free unmanaged resources (unmanaged objects) and override a finalizer below.
+            Shell_NotifyIcon(NIM_DELETE, ref _nid);
+            // set large fields to null.
+
+            disposedValue = true;
+        }
+    }
+
+    ~TrayIcon()
+    {
+        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        Dispose(false);
+    }
+
+    // This code added to correctly implement the disposable pattern.
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+    #endregion
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool Shell_NotifyIcon(uint message, ref NOTIFYICONDATA data);
+
+    private const uint NIM_ADD = 0x00;
+    private const uint NIM_MODIFY = 0x01;
+    private const uint NIM_DELETE = 0x02;
+    private const uint NIM_SETFOCUS = 0x03;
+    private const uint NIM_SETVERSION = 0x04;
+
+    private const uint NIF_MESSAGE = 0x01;
+    private const uint NIF_ICON = 0x02;
+    private const uint NIF_TIP = 0x04;
+    private const uint NIF_STATE = 0x08;
+    private const uint NIF_INFO = 0x10;
+    private const uint NIF_GUID = 0x20;
+    private const uint NIF_REALTIME = 0x40;
+    private const uint NIF_SHOWTIP = 0x80;
+
+    private const uint NIS_HIDDEN = 1;
+    private const uint NIS_SHAREDICON = 2;
+
+    private const int NOTIFYICON_VERSION_4 = 4;
+
+    private const int NIIF_NONE = 0x00;
+    private const int NIIF_INFO = 0x01;
+    private const int NIIF_WARNING = 0x02;
+    private const int NIIF_ERROR = 0x03;
+    private const int NIIF_USER = 0x04;
+
+    private const int NIIF_NOSOUND = 0x10;
+    private const int NIIF_LARGE_ICON = 0x20;
+    private const int NIIF_RESPECT_QUIET_TIME = 0x80;
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public struct NOTIFYICONDATA
     {
@@ -534,6 +561,30 @@ namespace System.Windows.Forms
         public uint dwInfoFlags;
         public Guid guidItem;
         public IntPtr hBalloonIcon;
+    }
+}
+
+
+
+
+namespace System.Windows.Forms
+{
+
+    public static class Extensions
+    {
+        [DllImport("user32.dll")]
+        private static extern int ShowWindow(IntPtr hWnd, uint Msg);
+
+        private const uint SW_RESTORE = 0x09;
+
+        public static void Restore(this Form form)
+        {
+            if (form.WindowState == FormWindowState.Minimized)
+            {
+                ShowWindow(form.Handle, SW_RESTORE);
+            }
+        }
+
     }
 
 }
