@@ -199,16 +199,19 @@ namespace MopidyTray
                             uri = uri.Substring(uri.IndexOf(':') + 1);
                             if (eventName != "track_playback_paused" && checkShowNotifications.Checked)
                             {
+                                TrackInfo track = TrackInfo.FromTracklistTrack(data.tl_track);
+                                string Description = track.Artists;
+                                if (!string.IsNullOrWhiteSpace(track.Album))
+                                    Description += Environment.NewLine + "(" + track.Album + ")";
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    string Description = DescribeTrack(data.tl_track.track, out string Title);
-                                    trayIcon.ShowNotification(Title, Description, MessageBoxIcon.None, true);
+                                    trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
                                 });
                             }
+                            this.Text = uri + " - " + Application.ProductName;
+                            uri = Path.ChangeExtension(uri, "").TrimEnd('.');
                             this.Invoke((MethodInvoker)delegate
                             {
-                                this.Text = uri + " - " + Application.ProductName;
-                                uri = Path.ChangeExtension(uri, "").TrimEnd('.');
                                 if (uri.Length > 63)
                                     trayIcon.Text = "…" + uri.Substring(uri.Length - 62, 62);
                                 else
@@ -266,23 +269,23 @@ namespace MopidyTray
 
         private void buttonCommand_Click(object sender, EventArgs e)
         {
-            var Command = comboCommand.Text;
+            string Command = comboCommand.Text;
             if (!comboCommand.Items.Contains(Command))
                 comboCommand.Items.Insert(0, Command);
-            var match = Regex.Match(Command, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
-            if (match.Success)
+            var Match = Regex.Match(Command, @"([a-z_.]+)\s*(?:\((.*)\))?", RegexOptions.IgnoreCase);
+            if (Match.Success)
             {
-                dynamic data;
-                if (match.Groups[2].Success)
+                dynamic Data;
+                if (Match.Groups[2].Success)
                 {
-                    dynamic parameters = JsonConvert.DeserializeObject("[" + match.Groups[2].Value + "]");
-                    data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value, @params = parameters };
+                    dynamic parameters = JsonConvert.DeserializeObject("[" + Match.Groups[2].Value + "]");
+                    Data = new { jsonrpc = "2.0", id = ++msgID, method = Match.Groups[1].Value, @params = parameters };
                 }
                 else
                 {
-                    data = new { jsonrpc = "2.0", id = ++msgID, method = match.Groups[1].Value };
+                    Data = new { jsonrpc = "2.0", id = ++msgID, method = Match.Groups[1].Value };
                 }
-                Command = JsonConvert.SerializeObject(data);
+                Command = JsonConvert.SerializeObject(Data);
             }
             EventClient.Send(Command);
             Log(Command, EventLogEntryType.Information);
@@ -292,7 +295,7 @@ namespace MopidyTray
         {
             var ID = ++msgID;
             dynamic Data = new { jsonrpc = "2.0", id = ID, method = command, @params = parameters };
-            var Command = JsonConvert.SerializeObject(Data);
+            string Command = JsonConvert.SerializeObject(Data);
             EventClient.Send(Command);
             Log(Command, EventLogEntryType.Information);
             return ID;
@@ -327,61 +330,13 @@ namespace MopidyTray
 
         private void Log(string message, EventLogEntryType type = EventLogEntryType.Information)
         {
-            int imageIndex = (int)Math.Round(Math.Log((int)type) / Math.Log(2));
+            int ImageIndex = (int)Math.Round(Math.Log((int)type) / Math.Log(2));
             state.Invoke((MethodInvoker)delegate
             {
-                state.Items.Add(null, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"), imageIndex).SubItems.Add(message);
+                state.Items.Add(null, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"), ImageIndex).SubItems.Add(message);
                 foreach (ColumnHeader column in state.Columns)
                     column.Width = -2;
             });
-        }
-
-        private string DescribeTrack(dynamic track, out string title)
-        {
-            title = null;
-            if (track.name != null)
-                title = track.name;
-            else
-            {
-                title = track.uri;
-                title = Uri.UnescapeDataString(title);
-            }
-            string Result = "";
-            if (track.artists != null)
-            {
-                var Artists = new List<string>();
-                foreach (dynamic artist in track.artists)
-                {
-                    Artists.Add(artist.name.ToString());
-                }
-                if (Artists.Count > 0)
-                    Result = string.Join(", ", Artists);
-            }
-            if (track.album != null && track.album.name != null)
-                Result += Environment.NewLine + "(" + track.album.name + ")";
-            if (string.IsNullOrWhiteSpace(Result))
-            {
-                Result = track.uri;
-                Result = Uri.UnescapeDataString(Result);
-                if (title == Result)
-                {
-                    // Strip the URI schema
-                    int pos = Result.IndexOf(':');
-                    if (pos > -1)
-                    {
-                        Result = Result.Substring(pos + 1);
-                        title = Result;
-                    }
-                    // try to split the file name
-                    pos = Result.LastIndexOf('/');
-                    if (pos > -1)
-                    {
-                        title = Result.Substring(pos + 1);
-                        Result = Result.Substring(0, pos);
-                    }
-                }
-            }
-            return Result.Trim();
         }
 
         private void notifyIcon_MouseClick(object sender, MouseEventArgs e)
@@ -449,6 +404,103 @@ namespace MopidyTray
                     break;
             }
         }
+
+        private class TrackInfo
+        {
+            public string Title;
+            public string Artists;
+            public string Album;
+
+            public static TrackInfo FromTrack(dynamic track)
+            {
+                TrackInfo trackInfo = null;
+                if (track != null && track.__model__ == "Track")
+                {
+                    trackInfo = new TrackInfo();
+                    // Track title = name
+                    if (track.name != null)
+                    {
+                        trackInfo.Title = track.name;
+                    }
+                    else
+                    {
+                        trackInfo.Title = Uri.UnescapeDataString(track.uri.ToString());
+                    }
+
+                    // Track album
+                    if (track.album != null && track.album.name != null)
+                    {
+                        trackInfo.Album = track.album.name;
+                    }
+
+                    // Track artist(s) / composer(s)
+                    var Artists = new List<string>();
+                    if (track.artists != null)
+                    {
+                        foreach (dynamic artist in track.artists)
+                        {
+                            string name = artist.name;
+                            Artists.Add(name);
+                        }
+                    }
+                    else if (track.album != null && track.album.artists != null)
+                    {
+                        foreach (dynamic artist in track.album.artists)
+                        {
+                            string name = artist.name;
+                            Artists.Add(name);
+                        }
+                    }
+                    else if (track.composers != null)
+                    {
+                        foreach (dynamic composer in track.composers)
+                        {
+                            string name = composer.name;
+                            Artists.Add(name);
+                        }
+                    }
+                    if (Artists.Count > 0)
+                    {
+                        trackInfo.Artists = string.Join(", ", Artists);
+                    }
+                    else
+                    {
+                        trackInfo.Artists = Uri.UnescapeDataString(track.uri.ToString());
+                    }
+
+                    // Check if track and artists are both track.uri; if so, try to split up the uri-as-filename
+                    if (trackInfo.Title == trackInfo.Artists)
+                    {
+                        var pos = trackInfo.Title.LastIndexOf("/");
+                        if (pos > 0)
+                        {
+                            trackInfo.Album = trackInfo.Title.Substring(0, pos);
+                            trackInfo.Title = trackInfo.Title.Substring(pos + 1);
+                        }
+                    }
+                }
+                return trackInfo;
+            }
+
+            public static TrackInfo FromTracklistTrack(dynamic tlTrack)
+            {
+                TrackInfo trackInfo = null;
+                if (tlTrack != null)
+                {
+                    switch (tlTrack.__model__)
+                    {
+                        case "TlTrack":
+                            trackInfo = FromTrack(tlTrack.track);
+                            break;
+                        case "Track":
+                            trackInfo = FromTrack(tlTrack);
+                            break;
+                    }
+                }
+                return trackInfo;
+            }
+        } // class TrackInfo
+
     }
 }
 
