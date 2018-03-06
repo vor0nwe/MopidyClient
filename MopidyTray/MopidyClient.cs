@@ -1,71 +1,208 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
 namespace MopidyTray
 {
-    class EventEventArgs : EventArgs
+    class EventEventArgs : CancelEventArgs
     {
-        public EventEventArgs (string eventName, dynamic data) : base()
+        public EventEventArgs (string eventName, JToken data) : base(false)
         {
             this.EventName = eventName;
             this.Data = data;
         }
         public string EventName { get; }
-        public dynamic Data { get; }
+        public JToken Data { get; }
     }
 
-    class MopidyClient
+    class ResultEventArgs : CancelEventArgs
     {
-        private WebSocket _socket;
-        private uint _messageID = (uint)new Random().Next(int.MaxValue);
-
-        public EventHandler                     OnConnect { get; set; }
-        public EventHandler<CloseEventArgs>     OnDisconnect { get; set; }
-        public EventHandler<ErrorEventArgs>     OnError { get; set; }
-        public EventHandler<MessageEventArgs>   OnMessage { get; set; }
-        public EventHandler<EventEventArgs>     OnEvent { get; set; }
-
-        public MopidyClient(Uri uri)
+        public ResultEventArgs(int commandID, JToken result) : base(false)
         {
-            _socket = new WebSocket(uri.ToString());
+            this.CommandID = commandID;
+            this.Result = result;
+        }
+        public int CommandID { get; }
+        public JToken Result { get; }
+    }
+
+    class MopidyClient : IDisposable
+    {
+        private class CommandState
+        {
+            public Task Retriever;
+            public JToken Result;
+        }
+
+        private WebSocket _socket;
+        private int _lastMessageID = (int)new Random().Next(int.MaxValue / 2);
+        private Dictionary<int,CommandState> _commands = new Dictionary<int, CommandState>();
+
+        public EventHandler                                 OnConnect { get; set; }
+        public EventHandler<CloseEventArgs>                 OnDisconnect { get; set; }
+        public EventHandler<WebSocketSharp.ErrorEventArgs>  OnError { get; set; }
+        public EventHandler<MessageEventArgs>               OnMessage { get; set; }
+        public EventHandler<EventEventArgs>                 OnEvent { get; set; }
+        public EventHandler<ResultEventArgs>                OnResult { get; set; }
+
+        public MopidyClient(string uri)
+        {
+            _socket = new WebSocket(uri);
             _socket.OnOpen += _socket_OnOpen;
             _socket.OnClose += _socket_OnClose;
             _socket.OnError += _socket_OnError;
             _socket.OnMessage += _socket_OnMessage;
         }
 
+        /// <summary>
+        /// Establishes a connection with the Mopidy server.
+        /// </summary>
         public void Connect()
         {
             _socket.ConnectAsync();
         }
 
+        /// <summary>
+        /// Closes the connection with the Mopidy server.
+        /// </summary>
         public void Disconnect()
         {
             _socket.CloseAsync();
         }
 
-        public uint Execute(string command, params object[] parameters)
+        /// <summary>
+        /// Sends a command to the Mopidy server to execute.
+        /// </summary>
+        /// <param name="command">The command to execute.</param>
+        /// <param name="parameters">The parameters for the <paramref name="command"/>.</param>
+        /// <returns>The ID of the command. Mopidy will include this ID in its response.</returns>
+        public int Execute(string command, params object[] parameters)
         {
-            var MessageID = ++_messageID;
+            var MessageID = ++_lastMessageID;
             dynamic Data = new { jsonrpc = "2.0", id = MessageID, method = command, @params = parameters };
             string Command = JsonConvert.SerializeObject(Data);
-            _socket.Send(Command);
-            //Log(Command, EventLogEntryType.Information);
+            _socket.SendAsync(Command, (sent) => { });
+            
+            // TODO: Log(Command, EventLogEntryType.Information);
             return MessageID;
+        }
+
+        /// <summary>
+        /// Sends a command to the Mopidy server to execute, waits for the result, and returns that.
+        /// </summary>
+        /// <param name="command">The command to execute.</param>
+        /// <param name="parameters">The parameters for the <paramref name="command"/>.</param>
+        /// <returns>Mopidy's result.</returns>
+        public async Task<JToken> ExecuteAsync(string command, params object[] parameters)
+        {
+            // Send the command to the server
+            var CommandID = Execute(command, parameters);
+
+            // Prepare a task to retrieve the result, and add that task to the _commands dictionary
+            var FetchResult = new Task<JToken>(FetchCommandResult, CommandID);
+            Monitor.Enter(_commands);
+            try
+            {
+                _commands.Add(CommandID, new CommandState { Retriever = FetchResult, Result = null });
+            }
+            finally
+            {
+                Monitor.Exit(_commands);
+            }
+            // Now wait for the task to complete (it will be started when the response comes in)
+            var Result = await FetchResult;
+
+            // Remove ID from _commandResults if we timed out
+            if (Result == null)
+            {
+                Monitor.Enter(_commands);
+                try
+                {
+                    if (_commands.ContainsKey(CommandID))
+                        _commands.Remove(CommandID);
+                }
+                finally
+                {
+                    Monitor.Exit(_commands);
+                }
+            }
+
+            return Result;
+        }
+
+        private JToken FetchCommandResult(object messageID)
+        {
+            Monitor.Enter(_commands);
+            try
+            {
+                var CommandState = _commands[(int)messageID];
+                _commands.Remove((int)messageID);
+                return CommandState.Result;
+            }
+            finally
+            {
+                Monitor.Exit(_commands);
+            }
         }
 
         private void _socket_OnMessage(object sender, MessageEventArgs e)
         {
-            // TODO: perform our own message handling; only if that doesn't do anything, fall through
+            var DataToken = JToken.Parse(e.Data);
+            Debug.Assert(DataToken.Type == JTokenType.Object, "Unexpected token type in message", "{0}", DataToken.Type.ToString());
+            var Data = DataToken.Value<JObject>();
+            if (Data.TryGetValue("event", out var Token))
+            {
+                var ea = new EventEventArgs(Token.Value<string>(), DataToken);
+                OnEvent(this, ea);
+                if (ea.Cancel)
+                    return;
+            }
+            else if (Data.TryGetValue("result", out var ResultToken))
+            {
+                int CommandID;
+                if (Data.TryGetValue("id", out var IDToken) && IDToken.Type == JTokenType.Integer)
+                    CommandID = IDToken.Value<int>();
+                else
+                    CommandID = -1;
+                // check if we sent that CommandID; if so, handle the result; if not, raise the Result event
+                if (CommandID != -1)
+                {
+                    CommandState State;
+                    bool Found = false;
+                    Monitor.Enter(_commands);
+                    try
+                    {
+                        Found = _commands.TryGetValue(CommandID, out State);
+                    }
+                    finally
+                    {
+                        Monitor.Exit(_commands);
+                    }
+                    if (Found)
+                    {
+                        State.Result = ResultToken;
+                        State.Retriever.Start();
+                        return;
+                    }
+                }
+                var ea = new ResultEventArgs(CommandID, ResultToken);
+                OnResult(this, ea);
+                if (ea.Cancel)
+                    return;
+            }
             this.OnMessage(this, e);
         }
 
-        private void _socket_OnError(object sender, ErrorEventArgs e)
+        private void _socket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
             this.OnError(this, e);
         }
@@ -79,5 +216,42 @@ namespace MopidyTray
         {
             this.OnConnect(this, e);
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects).
+                    Disconnect();
+                    _commands.Clear();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~MopidyClient() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }
