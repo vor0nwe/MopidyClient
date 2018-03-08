@@ -24,7 +24,7 @@ namespace MopidyTray
             InitializeComponent();
         }
 
-        public WebSocketSharp.WebSocket EventClient;
+        private MopidyClient Mopidy;
         private TrayIcon trayIcon;
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -71,12 +71,7 @@ namespace MopidyTray
                 }
             }
 
-            EventClient = new WebSocketSharp.WebSocket(Settings.Default.HostUri);
-            EventClient.OnOpen += Client_OnOpen;
-            EventClient.OnClose += Client_OnClose;
-            EventClient.OnError += Client_OnError;
-            EventClient.OnMessage += Client_OnMessage;
-            EventClient.ConnectAsync();
+            ReconnectMopidy(Settings.Default.HostUri);
 
             var prop = new SettingsProperty("Commands")
             {
@@ -99,8 +94,8 @@ namespace MopidyTray
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            if (!EventClient.IsAlive)
-                EventClient.Close();
+            if (Mopidy.IsConnected)
+                Mopidy.Disconnect();
             
             trayIcon.Dispose();
             trayIcon = null;
@@ -271,8 +266,8 @@ namespace MopidyTray
 
         private void Client_OnOpen(object sender, EventArgs e)
         {
-            Log($"Connection opened to {EventClient.Url.ToString()}.");
-            SetProperty("Host", EventClient.Url.ToString());
+            Log($"Connected to {Mopidy.Uri}");
+            SetProperty("Host", Mopidy.Uri);
             this.Invoke((MethodInvoker)delegate
             {
                 textURL.Enabled = false;
@@ -284,7 +279,7 @@ namespace MopidyTray
 
         private void Client_OnClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
-            Log($"Disconnected from {EventClient.Url.ToString()} ({e.Reason}).");
+            Log($"Disconnected from {Mopidy.Uri} ({e.Reason}).");
             this.Invoke((MethodInvoker)delegate
             {
                 textURL.Enabled = true;
@@ -316,18 +311,8 @@ namespace MopidyTray
                 }
                 Command = JsonConvert.SerializeObject(Data);
             }
-            EventClient.Send(Command);
+            Mopidy.WebSocket.Send(Command);
             Log(Command, EventLogEntryType.Information);
-        }
-
-        private int SendCommand(string command, params string[] parameters)
-        {
-            var ID = ++msgID;
-            dynamic Data = new { jsonrpc = "2.0", id = ID, method = command, @params = parameters };
-            string Command = JsonConvert.SerializeObject(Data);
-            EventClient.Send(Command);
-            Log(Command, EventLogEntryType.Information);
-            return ID;
         }
 
         private void SetProperty(string key, string value, bool bold = false)
@@ -404,22 +389,22 @@ namespace MopidyTray
 
         private void NextButton_Click(object sender, EventArgs e)
         {
-            SendCommand("core.playback.next");
+            Mopidy.Execute("core.playback.next");
         }
 
         private void PrevButton_Click(object sender, EventArgs e)
         {
-            SendCommand("core.playback.previous");
+            Mopidy.Execute("core.playback.previous");
         }
 
         private void PauseButton_Click(object sender, EventArgs e)
         {
-            SendCommand("core.playback.pause");
+            Mopidy.Execute("core.playback.pause");
         }
 
         private void PlayButton_Click(object sender, EventArgs e)
         {
-            SendCommand("core.playback.play");
+            Mopidy.Execute("core.playback.play");
         }
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
@@ -550,16 +535,30 @@ namespace MopidyTray
             }
         } // class TrackInfo
 
+        private void ReconnectMopidy(string uri)
+        {
+            if (Mopidy != null)
+            {
+                Mopidy.Dispose();
+                Mopidy = null;
+            }
+            Mopidy = new MopidyClient(uri);
+            Mopidy.OnConnect += Client_OnOpen;
+            Mopidy.OnDisconnect += Client_OnClose;
+            Mopidy.OnError += Client_OnError;
+            Mopidy.OnMessage += Client_OnMessage;
+            Mopidy.Connect();
+        }
+
         private void buttonURL_Click(object sender, EventArgs e)
         {
-            if (EventClient.IsAlive)
+            if (Mopidy.IsConnected)
             {
-                EventClient.Close(WebSocketSharp.CloseStatusCode.Normal, "By user request");
+                Mopidy.Disconnect();
             }
             else
             {
-                // TODO: EventClient.Url = new Uri(textURL.Text);
-                EventClient.ConnectAsync();
+                ReconnectMopidy(textURL.Text);
             }
         }
     }

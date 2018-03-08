@@ -145,7 +145,7 @@
             // 
             // ButtonPanel
             // 
-            this.ButtonPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.ButtonPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.ButtonPanel.AutoSize = true;
             this.ButtonPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ButtonPanel.Controls.Add(this.PrevButton);
@@ -153,7 +153,7 @@
             this.ButtonPanel.Controls.Add(this.PauseButton);
             this.ButtonPanel.Controls.Add(this.NextButton);
             this.ButtonPanel.Enabled = false;
-            this.ButtonPanel.Location = new System.Drawing.Point(625, 602);
+            this.ButtonPanel.Location = new System.Drawing.Point(625, 54);
             this.ButtonPanel.Name = "ButtonPanel";
             this.ButtonPanel.Size = new System.Drawing.Size(324, 54);
             this.ButtonPanel.TabIndex = 5;

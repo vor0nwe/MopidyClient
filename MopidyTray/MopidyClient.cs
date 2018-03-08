@@ -13,6 +13,17 @@ using WebSocketSharp;
 
 namespace MopidyTray
 {
+    class ExecuteEventArgs
+    {
+        public ExecuteEventArgs(string command, int commandID)
+        {
+            this.Command = command;
+            this.CommandID = commandID;
+        }
+        public string Command { get; }
+        public int CommandID { get; }
+    }
+
     class EventEventArgs : CancelEventArgs
     {
         public EventEventArgs (string eventName, JToken data) : base(false)
@@ -65,8 +76,13 @@ namespace MopidyTray
         public EventHandler<MessageEventArgs>               OnMessage { get; set; }
 
         public EventHandler<EventEventArgs>                 OnEvent { get; set; }
+        public EventHandler<ExecuteEventArgs>               OnExecute { get; set; }
         public EventHandler<ResultEventArgs>                OnCommandResult { get; set; }
         public EventHandler<ErrorEventArgs>                 OnCommandError { get; set; }
+
+        public WebSocket WebSocket => _socket;
+        public bool IsConnected => _socket.IsAlive;
+        public string Uri => _socket.Url.ToString();
 
         public MopidyClient(string uri)
         {
@@ -104,7 +120,9 @@ namespace MopidyTray
             var MessageID = ++_lastMessageID;
             dynamic Data = new { jsonrpc = "2.0", id = MessageID, method = command, @params = parameters };
             string Command = JsonConvert.SerializeObject(Data);
-            _socket.SendAsync(Command, (sent) => { });
+            _socket.SendAsync(Command, (sent) => {
+                OnExecute?.Invoke(this, new ExecuteEventArgs(Command, MessageID));
+            });
             
             // TODO: Log(Command, EventLogEntryType.Information);
             return MessageID;
@@ -173,7 +191,7 @@ namespace MopidyTray
             var DataToken = JToken.Parse(e.Data);
             Debug.Assert(DataToken.Type == JTokenType.Object, "Unexpected token type in message", "{0}", DataToken.Type.ToString());
             var Data = DataToken.Value<JObject>();
-            if (Data.TryGetValue("event", out var Token))
+            if (Data.TryGetValue("event", out var Token) && OnEvent != null)
             {
                 var ea = new EventEventArgs(Token.Value<string>(), DataToken);
                 OnEvent(this, ea);
@@ -183,7 +201,7 @@ namespace MopidyTray
             else if (Data.TryGetValue("id", out var IDToken) && IDToken.Type == JTokenType.Integer)
             {
                 int CommandID = IDToken.Value<int>();
-                // check if we sent that CommandID; if so, handle the result; if not, raise the Result event
+                // check if we sent that CommandID; if so, handle the result; if not, trigger the appropriate event
                 CommandState State;
                 bool Found = false;
                 Monitor.Enter(_commands);
@@ -203,7 +221,7 @@ namespace MopidyTray
                         State.Retriever.Start();
                         return;
                     }
-                    else
+                    else if (OnCommandResult != null)
                     {
                         var ea = new ResultEventArgs(CommandID, ResultToken);
                         OnCommandResult(this, ea);
@@ -219,7 +237,7 @@ namespace MopidyTray
                         State.Retriever.Start();
                         return;
                     }
-                    else
+                    else if (OnCommandError != null)
                     {
                         var ea = new ErrorEventArgs(CommandID, ErrorToken);
                         OnCommandError(this, ea);
@@ -228,22 +246,22 @@ namespace MopidyTray
                     }
                 }
             }
-            this.OnMessage(this, e);
+            OnMessage?.Invoke(this, e);
         }
 
         private void _socket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            this.OnError(this, e);
+            OnError?.Invoke(this, e);
         }
 
         private void _socket_OnClose(object sender, CloseEventArgs e)
         {
-            this.OnDisconnect(this, e);
+            OnDisconnect?.Invoke(this, e);
         }
 
         private void _socket_OnOpen(object sender, EventArgs e)
         {
-            this.OnConnect(this, e);
+            OnConnect?.Invoke(this, e);
         }
 
         #region IDisposable Support
