@@ -8,6 +8,6 @@ namespace MopidyTray.Models
 {
     class Artist : NamedModel
     {
-        string SortName { get; set; }
+        public string SortName { get; set; }
     }
 }

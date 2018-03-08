@@ -21,16 +21,16 @@ namespace MopidyTray.Models
             }
         }
 
-        private const long UnixEpochStart = 621355968000000000; // new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
-        protected DateTime IntToDateTime(long pythonDateTime)
+
+        protected static class Utils
         {
-            // TODO: check if this gives the correct date/time
-            return new DateTime(UnixEpochStart + pythonDateTime, DateTimeKind.Utc);
-        }
-        protected long DateTimeToInt(DateTime dateTime)
-        {
-            // TODO: check if this gives the correct timestamp
-            return dateTime.ToUniversalTime().Ticks - UnixEpochStart;
+            private const long UnixEpochStart = 621355968000000000; // new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+                                                                    
+            // TODO: test if this gives the correct date/time (both ways)
+            public static DateTime IntToDateTime(long pythonDateTime) =>
+                new DateTime(UnixEpochStart + pythonDateTime, DateTimeKind.Utc);
+            public static long DateTimeToInt(DateTime dateTime) =>
+                dateTime.ToUniversalTime().Ticks - UnixEpochStart;
         }
     }
 

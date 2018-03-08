@@ -31,21 +31,22 @@ namespace MopidyTray.Models
                 if (LastModified == null)
                     return null;
                 else
-                    return IntToDateTime(LastModified.Value);
+                    return Utils.IntToDateTime(LastModified.Value);
             }
             set
             {
                 if (value == null)
                     LastModified = null;
                 else
-                    LastModified = DateTimeToInt(value.Value);
+                    LastModified = Utils.DateTimeToInt(value.Value);
             }
         }
     }
 
     class TlTrack : BaseModel
     {
-        public int Tlid { get; set; }
+        [JsonProperty(PropertyName = "tlid")]
+        public int TracklistID { get; set; }
         public Track Track { get; set; }
     }
 }

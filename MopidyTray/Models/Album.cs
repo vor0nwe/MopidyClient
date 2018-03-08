@@ -8,10 +8,10 @@ namespace MopidyTray.Models
 {
     class Album : NamedModel
     {
-        List<Artist> Artists { get; } = new List<Artist>();
-        int? NumTracks { get; set; }
-        int? NumDiscs { get; set; }
-        DateTime? Date { get; set; }
-        string MusicBrainzID { get; set; }
+        public List<Artist> Artists { get; } = new List<Artist>();
+        public int? NumTracks { get; set; }
+        public int? NumDiscs { get; set; }
+        public DateTime? Date { get; set; }
+        public string MusicBrainzID { get; set; }
     }
 }

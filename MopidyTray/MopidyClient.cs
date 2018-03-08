@@ -41,6 +41,7 @@ namespace MopidyTray
         {
             public Task Retriever;
             public JToken Result;
+            public JToken Error;
         }
 
         private WebSocket _socket;
