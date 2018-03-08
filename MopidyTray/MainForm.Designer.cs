@@ -72,7 +72,7 @@
             this.state.Size = new System.Drawing.Size(933, 602);
             this.state.SmallImageList = this.imageList;
             this.state.Sorting = System.Windows.Forms.SortOrder.Descending;
-            this.state.TabIndex = 4;
+            this.state.TabIndex = 3;
             this.state.UseCompatibleStateImageBehavior = false;
             this.state.View = System.Windows.Forms.View.Details;
             this.state.DoubleClick += new System.EventHandler(this.state_DoubleClick);
@@ -101,7 +101,7 @@
             this.labelCommand.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.labelCommand.Name = "labelCommand";
             this.labelCommand.Size = new System.Drawing.Size(81, 20);
-            this.labelCommand.TabIndex = 0;
+            this.labelCommand.TabIndex = 4;
             this.labelCommand.Text = "Command:";
             // 
             // buttonCommand
@@ -111,7 +111,7 @@
             this.buttonCommand.Margin = new System.Windows.Forms.Padding(4);
             this.buttonCommand.Name = "buttonCommand";
             this.buttonCommand.Size = new System.Drawing.Size(103, 36);
-            this.buttonCommand.TabIndex = 2;
+            this.buttonCommand.TabIndex = 6;
             this.buttonCommand.Text = "Send";
             this.buttonCommand.UseVisualStyleBackColor = true;
             this.buttonCommand.Click += new System.EventHandler(this.buttonCommand_Click);
@@ -126,7 +126,7 @@
             this.comboCommand.Margin = new System.Windows.Forms.Padding(4);
             this.comboCommand.Name = "comboCommand";
             this.comboCommand.Size = new System.Drawing.Size(544, 28);
-            this.comboCommand.TabIndex = 1;
+            this.comboCommand.TabIndex = 5;
             this.comboCommand.Text = global::MopidyTray.Properties.Settings.Default.Command;
             // 
             // checkShowNotifications
@@ -139,7 +139,7 @@
             this.checkShowNotifications.Margin = new System.Windows.Forms.Padding(4);
             this.checkShowNotifications.Name = "checkShowNotifications";
             this.checkShowNotifications.Size = new System.Drawing.Size(150, 24);
-            this.checkShowNotifications.TabIndex = 3;
+            this.checkShowNotifications.TabIndex = 7;
             this.checkShowNotifications.Text = "Show notifications";
             this.checkShowNotifications.UseVisualStyleBackColor = true;
             // 
@@ -153,7 +153,7 @@
             this.ButtonPanel.Controls.Add(this.PauseButton);
             this.ButtonPanel.Controls.Add(this.NextButton);
             this.ButtonPanel.Enabled = false;
-            this.ButtonPanel.Location = new System.Drawing.Point(620, 602);
+            this.ButtonPanel.Location = new System.Drawing.Point(625, 602);
             this.ButtonPanel.Name = "ButtonPanel";
             this.ButtonPanel.Size = new System.Drawing.Size(324, 54);
             this.ButtonPanel.TabIndex = 5;
@@ -166,7 +166,7 @@
             this.PrevButton.Location = new System.Drawing.Point(3, 3);
             this.PrevButton.Name = "PrevButton";
             this.PrevButton.Size = new System.Drawing.Size(75, 48);
-            this.PrevButton.TabIndex = 0;
+            this.PrevButton.TabIndex = 8;
             this.PrevButton.Text = "◀▮";
             this.PrevButton.UseVisualStyleBackColor = true;
             this.PrevButton.Click += new System.EventHandler(this.PrevButton_Click);
@@ -179,7 +179,7 @@
             this.PlayButton.Location = new System.Drawing.Point(84, 3);
             this.PlayButton.Name = "PlayButton";
             this.PlayButton.Size = new System.Drawing.Size(75, 48);
-            this.PlayButton.TabIndex = 1;
+            this.PlayButton.TabIndex = 9;
             this.PlayButton.Text = "▶";
             this.PlayButton.UseVisualStyleBackColor = true;
             this.PlayButton.Click += new System.EventHandler(this.PlayButton_Click);
@@ -192,7 +192,7 @@
             this.PauseButton.Location = new System.Drawing.Point(165, 3);
             this.PauseButton.Name = "PauseButton";
             this.PauseButton.Size = new System.Drawing.Size(75, 48);
-            this.PauseButton.TabIndex = 3;
+            this.PauseButton.TabIndex = 11;
             this.PauseButton.Text = "▮▮";
             this.PauseButton.UseVisualStyleBackColor = true;
             this.PauseButton.Click += new System.EventHandler(this.PauseButton_Click);
@@ -205,7 +205,7 @@
             this.NextButton.Location = new System.Drawing.Point(246, 3);
             this.NextButton.Name = "NextButton";
             this.NextButton.Size = new System.Drawing.Size(75, 48);
-            this.NextButton.TabIndex = 2;
+            this.NextButton.TabIndex = 12;
             this.NextButton.Text = "▮▶";
             this.NextButton.UseVisualStyleBackColor = true;
             this.NextButton.Click += new System.EventHandler(this.NextButton_Click);
