@@ -130,11 +130,11 @@ namespace MopidyTray
                     {
                         case "mute_changed":
                             extra = data.mute;
-                            SetProperty("mute", extra);
+                            SetProperty("Mute", extra);
                             break;
                         case "playback_state_changed":
                             extra = data.new_state;
-                            SetProperty("state", extra);
+                            SetProperty("State", extra);
                             this.Invoke((MethodInvoker)delegate
                             {
                                 switch (extra)
@@ -162,7 +162,7 @@ namespace MopidyTray
                             break;
                         case "stream_title_changed":
                             string title = data.title.ToString();
-                            SetProperty("stream_title", title);
+                            SetProperty("Stream Title", title);
                             extra = title;
                             if (!string.IsNullOrWhiteSpace(title))
                             {
@@ -176,7 +176,21 @@ namespace MopidyTray
                             }
                             break;
                         case "track_playback_ended":
-                            SetProperty("track", "");
+                            state.Invoke((MethodInvoker)delegate
+                            {
+                                state.BeginUpdate();
+                                try
+                                {
+                                    SetProperty("Track URI", "");
+                                    SetProperty("Track Title", "");
+                                    SetProperty("Track Artist(s)", "");
+                                    SetProperty("Track Album", "");
+                                }
+                                finally
+                                {
+                                    state.EndUpdate();
+                                }
+                            });
                             extra = data.tl_track.track.uri;
                             extra = Uri.UnescapeDataString(extra);
                             this.Invoke((MethodInvoker)delegate
@@ -194,39 +208,43 @@ namespace MopidyTray
                         case "track_playback_started":
                             uri = data.tl_track.track.uri;
                             uri = Uri.UnescapeDataString(uri);
-                            SetProperty("track", uri);
                             extra = uri;
-                            uri = uri.Substring(uri.IndexOf(':') + 1);
-                            TrackInfo track = TrackInfo.FromTracklistTrack(data.tl_track);
-                            if (eventName != "track_playback_paused" && checkShowNotifications.Checked)
+                            var trackInfo = TrackInfo.FromTracklistTrack(data.tl_track, true);
+                            var track = TrackInfo.FromTracklistTrack(data.tl_track, false);
+                            state.Invoke((MethodInvoker)delegate
                             {
-                                string Description = track.Artists;
-                                if (!string.IsNullOrWhiteSpace(track.Album))
-                                    Description += Environment.NewLine + "(" + track.Album + ")";
-                                this.Invoke((MethodInvoker)delegate
+                                state.BeginUpdate();
+                                try
                                 {
+                                    SetProperty("Track URI", uri);
+                                    SetProperty("Track Title", trackInfo.Title, true);
+                                    SetProperty("Track Artist(s)", trackInfo.Artists);
+                                    SetProperty("Track Album", trackInfo.Album);
+                                }
+                                finally
+                                {
+                                    state.EndUpdate();
+                                }
+
+                                if (eventName != "track_playback_paused" && checkShowNotifications.Checked)
+                                {
+                                    string Description = track.Artists;
+                                    if (!string.IsNullOrWhiteSpace(track.Album))
+                                        Description += Environment.NewLine + "(" + track.Album + ")";
                                     trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
-                                });
-                            }
-                            this.Invoke((MethodInvoker)delegate
-                            {
-                                var TrackInfo = $"{track.Title} - {track.Artists}";
-                                this.Text = TrackInfo + " - " + Application.ProductName;
-                                if (TrackInfo.Length > 63)
-                                    trayIcon.Text = TrackInfo.Substring(0, 62) + "…";
+                                }
+                                var TrackLine = $"{track.Title} - {track.Artists}";
+                                this.Text = TrackLine + " - " + Application.ProductName;
+                                if (TrackLine.Length > 63)
+                                    trayIcon.Text = TrackLine.Substring(0, 62) + "…";
                                 else
-                                    trayIcon.Text = TrackInfo;
-                                //uri = Path.ChangeExtension(uri, "").TrimEnd('.');
-                                //if (uri.Length > 63)
-                                //    trayIcon.Text = "…" + uri.Substring(uri.Length - 62, 62);
-                                //else
-                                //    trayIcon.Text = uri;
+                                    trayIcon.Text = TrackLine;
                             });
                             // TODO
                             break;
                         case "volume_changed":
                             extra = data.volume;
-                            SetProperty("volume", extra);
+                            SetProperty("Volume", extra);
                             break;
                     }
                     Log(JsonConvert.SerializeObject(data.@event, Formatting.Indented) + " - " + extra, EventLogEntryType.SuccessAudit);
@@ -312,7 +330,7 @@ namespace MopidyTray
             return ID;
         }
 
-        private void SetProperty(string key, string value)
+        private void SetProperty(string key, string value, bool bold = false)
         {
             state.Invoke((MethodInvoker)delegate
             {
@@ -326,12 +344,22 @@ namespace MopidyTray
                 {
                     if (Items.Length == 0)
                     {
-                        state.Items.Insert(0, key, key, -1).SubItems.Add(value);
+                        var Subitem = state.Items.Insert(0, key, key, -1).SubItems.Add(value);
+                        if (bold)
+                            Subitem.Font = new Font(Subitem.Font, FontStyle.Bold);
                     }
                     else
                     {
                         var Item = Items[0];
-                        Item.SubItems[Item.SubItems.Count - 1].Text = value;
+                        var Subitem = Item.SubItems[Item.SubItems.Count - 1];
+                        Subitem.Text = value;
+                        if (Subitem.Font.Bold != bold)
+                        {
+                            if (bold)
+                                Subitem.Font = new Font(Subitem.Font, FontStyle.Bold);
+                            else
+                                Subitem.Font = new Font(Subitem.Font, 0);
+                        }
                     }
                 }
                 foreach (ColumnHeader column in state.Columns)
@@ -422,7 +450,17 @@ namespace MopidyTray
             public string Artists;
             public string Album;
 
-            public static TrackInfo FromTrack(dynamic track)
+            private static string CleanUri(dynamic model)
+            {
+                if (model.uri == null)
+                    return null;
+                string uri = model.uri;
+                uri = uri.Substring(uri.IndexOf(':') + 1);
+                uri = Uri.UnescapeDataString(uri);
+                return uri;
+            }
+
+            public static TrackInfo FromTrack(dynamic track, bool onlyOriginal)
             {
                 TrackInfo trackInfo = null;
                 if (track != null && track.__model__ == "Track")
@@ -433,9 +471,9 @@ namespace MopidyTray
                     {
                         trackInfo.Title = track.name;
                     }
-                    else
+                    else if(!onlyOriginal)
                     {
-                        trackInfo.Title = Uri.UnescapeDataString(track.uri.ToString());
+                        trackInfo.Title = CleanUri(track);
                     }
 
                     // Track album
@@ -474,13 +512,13 @@ namespace MopidyTray
                     {
                         trackInfo.Artists = string.Join(", ", Artists);
                     }
-                    else
+                    else if(!onlyOriginal)
                     {
-                        trackInfo.Artists = Uri.UnescapeDataString(track.uri.ToString());
+                        trackInfo.Artists = CleanUri(track);
                     }
 
                     // Check if track and artists are both track.uri; if so, try to split up the uri-as-filename
-                    if (trackInfo.Title == trackInfo.Artists)
+                    if (!onlyOriginal && (trackInfo.Title == trackInfo.Artists))
                     {
                         var pos = trackInfo.Title.LastIndexOf("/");
                         if (pos > 0)
@@ -493,7 +531,7 @@ namespace MopidyTray
                 return trackInfo;
             }
 
-            public static TrackInfo FromTracklistTrack(dynamic tlTrack)
+            public static TrackInfo FromTracklistTrack(dynamic tlTrack, bool onlyOriginal)
             {
                 TrackInfo trackInfo = null;
                 if (tlTrack != null && tlTrack.__model__ != null)
@@ -501,10 +539,10 @@ namespace MopidyTray
                     switch (tlTrack.__model__.ToString())
                     {
                         case "TlTrack":
-                            trackInfo = FromTrack(tlTrack.track);
+                            trackInfo = FromTrack(tlTrack.track, onlyOriginal);
                             break;
                         case "Track":
-                            trackInfo = FromTrack(tlTrack);
+                            trackInfo = FromTrack(tlTrack, onlyOriginal);
                             break;
                     }
                 }
