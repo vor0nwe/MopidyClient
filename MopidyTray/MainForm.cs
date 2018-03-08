@@ -200,18 +200,21 @@ namespace MopidyTray
                             if (eventName != "track_playback_paused" && checkShowNotifications.Checked)
                             {
                                 TrackInfo track = TrackInfo.FromTracklistTrack(data.tl_track);
-                                string Description = track.Artists;
-                                if (!string.IsNullOrWhiteSpace(track.Album))
-                                    Description += Environment.NewLine + "(" + track.Album + ")";
-                                this.Invoke((MethodInvoker)delegate
+                                if (track != null)
                                 {
-                                    trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
-                                });
+                                    string Description = track.Artists;
+                                    if (!string.IsNullOrWhiteSpace(track.Album))
+                                        Description += Environment.NewLine + "(" + track.Album + ")";
+                                    this.Invoke((MethodInvoker)delegate
+                                    {
+                                        trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
+                                    });
+                                }
                             }
-                            this.Text = uri + " - " + Application.ProductName;
-                            uri = Path.ChangeExtension(uri, "").TrimEnd('.');
                             this.Invoke((MethodInvoker)delegate
                             {
+                                this.Text = uri + " - " + Application.ProductName;
+                                uri = Path.ChangeExtension(uri, "").TrimEnd('.');
                                 if (uri.Length > 63)
                                     trayIcon.Text = "…" + uri.Substring(uri.Length - 62, 62);
                                 else
@@ -485,9 +488,9 @@ namespace MopidyTray
             public static TrackInfo FromTracklistTrack(dynamic tlTrack)
             {
                 TrackInfo trackInfo = null;
-                if (tlTrack != null)
+                if (tlTrack != null && tlTrack.__model__ != null)
                 {
-                    switch (tlTrack.__model__)
+                    switch (tlTrack.__model__.ToString())
                     {
                         case "TlTrack":
                             trackInfo = FromTrack(tlTrack.track);
