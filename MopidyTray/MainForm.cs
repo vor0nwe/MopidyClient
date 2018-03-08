@@ -251,9 +251,12 @@ namespace MopidyTray
 
         private void Client_OnOpen(object sender, EventArgs e)
         {
+            Log($"Connection opened to {EventClient.Url.ToString()}.");
             SetProperty("Host", EventClient.Url.ToString());
             this.Invoke((MethodInvoker)delegate
             {
+                textURL.Enabled = false;
+                buttonURL.Text = "Disconnect";
                 ButtonPanel.Enabled = true;
                 trayIcon.Icon = Resources.mopidy_icon;
             });
@@ -261,8 +264,11 @@ namespace MopidyTray
 
         private void Client_OnClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
+            Log($"Disconnected from {EventClient.Url.ToString()} ({e.Reason}).");
             this.Invoke((MethodInvoker)delegate
             {
+                textURL.Enabled = true;
+                buttonURL.Text = "Connect";
                 ButtonPanel.Enabled = false;
                 trayIcon.Icon = Resources.mopidy_icon_gray;
             });
@@ -504,6 +510,18 @@ namespace MopidyTray
             }
         } // class TrackInfo
 
+        private void buttonURL_Click(object sender, EventArgs e)
+        {
+            if (EventClient.IsAlive)
+            {
+                EventClient.Close(WebSocketSharp.CloseStatusCode.Normal, "By user request");
+            }
+            else
+            {
+                // TODO: EventClient.Url = new Uri(textURL.Text);
+                EventClient.ConnectAsync();
+            }
+        }
     }
 }
 

@@ -44,6 +44,9 @@
             this.PlayButton = new System.Windows.Forms.Button();
             this.PauseButton = new System.Windows.Forms.Button();
             this.NextButton = new System.Windows.Forms.Button();
+            this.textURL = new System.Windows.Forms.TextBox();
+            this.labelURL = new System.Windows.Forms.Label();
+            this.buttonURL = new System.Windows.Forms.Button();
             this.ButtonPanel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -63,10 +66,10 @@
             this.colValue});
             this.state.FullRowSelect = true;
             this.state.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
-            this.state.Location = new System.Drawing.Point(16, 19);
+            this.state.Location = new System.Drawing.Point(16, 54);
             this.state.Margin = new System.Windows.Forms.Padding(4);
             this.state.Name = "state";
-            this.state.Size = new System.Drawing.Size(928, 637);
+            this.state.Size = new System.Drawing.Size(933, 602);
             this.state.SmallImageList = this.imageList;
             this.state.Sorting = System.Windows.Forms.SortOrder.Descending;
             this.state.TabIndex = 4;
@@ -132,7 +135,7 @@
             this.checkShowNotifications.AutoSize = true;
             this.checkShowNotifications.Checked = global::MopidyTray.Properties.Settings.Default.ShowNotifications;
             this.checkShowNotifications.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::MopidyTray.Properties.Settings.Default, "ShowNotifications", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkShowNotifications.Location = new System.Drawing.Point(796, 676);
+            this.checkShowNotifications.Location = new System.Drawing.Point(800, 674);
             this.checkShowNotifications.Margin = new System.Windows.Forms.Padding(4);
             this.checkShowNotifications.Name = "checkShowNotifications";
             this.checkShowNotifications.Size = new System.Drawing.Size(150, 24);
@@ -142,7 +145,7 @@
             // 
             // ButtonPanel
             // 
-            this.ButtonPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.ButtonPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.ButtonPanel.AutoSize = true;
             this.ButtonPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ButtonPanel.Controls.Add(this.PrevButton);
@@ -150,7 +153,7 @@
             this.ButtonPanel.Controls.Add(this.PauseButton);
             this.ButtonPanel.Controls.Add(this.NextButton);
             this.ButtonPanel.Enabled = false;
-            this.ButtonPanel.Location = new System.Drawing.Point(620, 11);
+            this.ButtonPanel.Location = new System.Drawing.Point(620, 602);
             this.ButtonPanel.Name = "ButtonPanel";
             this.ButtonPanel.Size = new System.Drawing.Size(324, 54);
             this.ButtonPanel.TabIndex = 5;
@@ -207,12 +210,46 @@
             this.NextButton.UseVisualStyleBackColor = true;
             this.NextButton.Click += new System.EventHandler(this.NextButton_Click);
             // 
+            // textURL
+            // 
+            this.textURL.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.textURL.DataBindings.Add(new System.Windows.Forms.Binding("Text", global::MopidyTray.Properties.Settings.Default, "HostUri", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.textURL.Location = new System.Drawing.Point(115, 16);
+            this.textURL.Name = "textURL";
+            this.textURL.Size = new System.Drawing.Size(726, 27);
+            this.textURL.TabIndex = 1;
+            this.textURL.Text = global::MopidyTray.Properties.Settings.Default.HostUri;
+            // 
+            // labelURL
+            // 
+            this.labelURL.AutoSize = true;
+            this.labelURL.Location = new System.Drawing.Point(16, 19);
+            this.labelURL.Name = "labelURL";
+            this.labelURL.Size = new System.Drawing.Size(93, 20);
+            this.labelURL.TabIndex = 0;
+            this.labelURL.Text = "Mopidy URL:";
+            // 
+            // buttonURL
+            // 
+            this.buttonURL.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonURL.Location = new System.Drawing.Point(847, 11);
+            this.buttonURL.Name = "buttonURL";
+            this.buttonURL.Size = new System.Drawing.Size(103, 36);
+            this.buttonURL.TabIndex = 2;
+            this.buttonURL.Text = "Connect";
+            this.buttonURL.UseVisualStyleBackColor = true;
+            this.buttonURL.Click += new System.EventHandler(this.buttonURL_Click);
+            // 
             // MainForm
             // 
             this.AcceptButton = this.buttonCommand;
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(962, 716);
+            this.Controls.Add(this.buttonURL);
+            this.Controls.Add(this.labelURL);
+            this.Controls.Add(this.textURL);
             this.Controls.Add(this.ButtonPanel);
             this.Controls.Add(this.comboCommand);
             this.Controls.Add(this.buttonCommand);
@@ -250,6 +287,9 @@
         private System.Windows.Forms.Button PlayButton;
         private System.Windows.Forms.Button NextButton;
         private System.Windows.Forms.Button PauseButton;
+        private System.Windows.Forms.TextBox textURL;
+        private System.Windows.Forms.Label labelURL;
+        private System.Windows.Forms.Button buttonURL;
     }
 }
 
