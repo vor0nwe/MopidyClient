@@ -35,6 +35,17 @@ namespace MopidyTray
         public JToken Result { get; }
     }
 
+    class ErrorEventArgs : CancelEventArgs
+    {
+        public ErrorEventArgs(int commandID, JToken error) : base(false)
+        {
+            this.CommandID = commandID;
+            this.Error = error;
+        }
+        public int CommandID { get; }
+        public JToken Error { get; }
+    }
+
     class MopidyClient : IDisposable
     {
         private class CommandState
@@ -52,8 +63,10 @@ namespace MopidyTray
         public EventHandler<CloseEventArgs>                 OnDisconnect { get; set; }
         public EventHandler<WebSocketSharp.ErrorEventArgs>  OnError { get; set; }
         public EventHandler<MessageEventArgs>               OnMessage { get; set; }
+
         public EventHandler<EventEventArgs>                 OnEvent { get; set; }
-        public EventHandler<ResultEventArgs>                OnResult { get; set; }
+        public EventHandler<ResultEventArgs>                OnCommandResult { get; set; }
+        public EventHandler<ErrorEventArgs>                 OnCommandError { get; set; }
 
         public MopidyClient(string uri)
         {
@@ -167,38 +180,53 @@ namespace MopidyTray
                 if (ea.Cancel)
                     return;
             }
-            else if (Data.TryGetValue("result", out var ResultToken))
+            else if (Data.TryGetValue("id", out var IDToken) && IDToken.Type == JTokenType.Integer)
             {
-                int CommandID;
-                if (Data.TryGetValue("id", out var IDToken) && IDToken.Type == JTokenType.Integer)
-                    CommandID = IDToken.Value<int>();
-                else
-                    CommandID = -1;
+                int CommandID = IDToken.Value<int>();
                 // check if we sent that CommandID; if so, handle the result; if not, raise the Result event
-                if (CommandID != -1)
+                CommandState State;
+                bool Found = false;
+                Monitor.Enter(_commands);
+                try
                 {
-                    CommandState State;
-                    bool Found = false;
-                    Monitor.Enter(_commands);
-                    try
-                    {
-                        Found = _commands.TryGetValue(CommandID, out State);
-                    }
-                    finally
-                    {
-                        Monitor.Exit(_commands);
-                    }
+                    Found = _commands.TryGetValue(CommandID, out State);
+                }
+                finally
+                {
+                    Monitor.Exit(_commands);
+                }
+                if (Data.TryGetValue("result", out var ResultToken))
+                {
                     if (Found)
                     {
                         State.Result = ResultToken;
                         State.Retriever.Start();
                         return;
                     }
+                    else
+                    {
+                        var ea = new ResultEventArgs(CommandID, ResultToken);
+                        OnCommandResult(this, ea);
+                        if (ea.Cancel)
+                            return;
+                    }
                 }
-                var ea = new ResultEventArgs(CommandID, ResultToken);
-                OnResult(this, ea);
-                if (ea.Cancel)
-                    return;
+                else if(Data.TryGetValue("error", out var ErrorToken))
+                {
+                    if (Found)
+                    {
+                        State.Error = ErrorToken;
+                        State.Retriever.Start();
+                        return;
+                    }
+                    else
+                    {
+                        var ea = new ErrorEventArgs(CommandID, ErrorToken);
+                        OnCommandError(this, ea);
+                        if (ea.Cancel)
+                            return;
+                    }
+                }
             }
             this.OnMessage(this, e);
         }
