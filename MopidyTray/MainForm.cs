@@ -281,7 +281,7 @@ namespace MopidyTray
 
         private void Client_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            Log(e.Exception.ToString(), EventLogEntryType.Warning);
+            Log(e.Message ?? e.Exception?.ToString() ?? "<unknown error>", EventLogEntryType.Warning);
         }
 
         private void Client_OnOpen(object sender, EventArgs e)
@@ -308,6 +308,31 @@ namespace MopidyTray
                 trayIcon.Icon = Resources.mopidy_icon_gray;
             });
         }
+
+        private void Client_OnTrackStarted(object sender, TlTrackEventArgs e)
+        {
+            DescribeTrack(e.Track, true);
+            UpdatePosition(e.Track.Track.Length, DateTime.UtcNow, true);
+        }
+
+        private void Client_OnTrackEnded(object sender, TlTrackTimeEventArgs e)
+        {
+            DescribeTrack(null, false);
+            UpdatePosition(e.Track.Track.Length, e.TimePosition, false);
+        }
+
+        private void Client_OnTrackPaused(object sender, TlTrackTimeEventArgs e)
+        {
+            DescribeTrack(e.Track, true);
+            UpdatePosition(e.Track.Track.Length, e.TimePosition, false);
+        }
+
+        private void Client_OnTrackResumed(object sender, TlTrackTimeEventArgs e)
+        {
+            DescribeTrack(e.Track, true);
+            UpdatePosition(e.Track.Track.Length, e.TimePosition, true);
+        }
+
 
         private int msgID = new Random(DateTime.Now.Millisecond).Next(10000);
 
@@ -567,6 +592,10 @@ namespace MopidyTray
             Mopidy.OnDisconnect += Client_OnClose;
             Mopidy.OnError += Client_OnError;
             Mopidy.OnMessage += Client_OnMessage;
+            Mopidy.OnTrackStarted += Client_OnTrackStarted;
+            Mopidy.OnTrackPaused += Client_OnTrackPaused;
+            Mopidy.OnTrackResumed += Client_OnTrackResumed;
+            Mopidy.OnTrackEnded += Client_OnTrackEnded;
             Mopidy.Connect();
         }
 
@@ -580,6 +609,38 @@ namespace MopidyTray
             {
                 ReconnectMopidy(textURL.Text);
             }
+        }
+
+        private void timerPosition_Tick(object sender, EventArgs e)
+        {
+            var Started = (DateTime)timerPosition.Tag;
+            var Position = (int)Math.Round((DateTime.UtcNow - Started).TotalMilliseconds);
+            if (Position <= trackPosition.Maximum)
+                trackPosition.Value = Position;
+            else
+                trackPosition.Value = trackPosition.Maximum;
+        }
+
+        private void UpdatePosition(int? maximum, DateTime start, bool tracking)
+        {
+            this.Invoke((MethodInvoker)delegate
+            {
+                timerPosition.Enabled = false;
+                trackPosition.Maximum = maximum ?? 0;
+                trackPosition.Tag = start;
+                trackPosition.Value = 0;
+                timerPosition.Enabled = tracking;
+            });
+        }
+        private void UpdatePosition(int? maximum, int position, bool tracking)
+        {
+            this.Invoke((MethodInvoker)delegate
+            {
+                timerPosition.Enabled = false;
+                trackPosition.Maximum = maximum ?? 0;
+                trackPosition.Value = position;
+                timerPosition.Enabled = tracking;
+            });
         }
     }
 }
