@@ -123,8 +123,6 @@ namespace MopidyTray
             _socket.SendAsync(Command, (sent) => {
                 OnExecute?.Invoke(this, new ExecuteEventArgs(Command, MessageID));
             });
-            
-            // TODO: Log(Command, EventLogEntryType.Information);
             return MessageID;
         }
 
@@ -144,7 +142,11 @@ namespace MopidyTray
             Monitor.Enter(_commands);
             try
             {
-                _commands.Add(CommandID, new CommandState { Retriever = FetchResult, Result = null });
+                _commands.Add(CommandID, new CommandState {
+                    Retriever = FetchResult,
+                    Result = null,
+                    Error = null,
+                });
             }
             finally
             {
@@ -171,6 +173,20 @@ namespace MopidyTray
             return Result;
         }
 
+        public async Task<T> ExecuteAsync<T>(string command, params object[] parameters)
+        {
+            var result = await ExecuteAsync(command, parameters);
+            return result.ToObject<T>();
+        }
+
+        public T Execute<T>(string command, params object[] parameters)
+        {
+            var task = ExecuteAsync<T>(command, parameters);
+            task.Start();
+            task.Wait();
+            return task.Result;
+        }
+
         private JToken FetchCommandResult(object messageID)
         {
             Monitor.Enter(_commands);
@@ -178,7 +194,11 @@ namespace MopidyTray
             {
                 var CommandState = _commands[(int)messageID];
                 _commands.Remove((int)messageID);
-                return CommandState.Result;
+                if (CommandState.Error != null)
+                    // TODO: make custom exception type
+                    throw new Exception(CommandState.Error.ToString());
+                else
+                    return CommandState.Result;
             }
             finally
             {
@@ -191,9 +211,10 @@ namespace MopidyTray
             var DataToken = JToken.Parse(e.Data);
             Debug.Assert(DataToken.Type == JTokenType.Object, "Unexpected token type in message", "{0}", DataToken.Type.ToString());
             var Data = DataToken.Value<JObject>();
-            if (Data.TryGetValue("event", out var Token) && OnEvent != null)
+            if (Data.TryGetValue("event", out var EventToken) && OnEvent != null)
             {
-                var ea = new EventEventArgs(Token.Value<string>(), DataToken);
+                var ea = new EventEventArgs(EventToken.Value<string>(), DataToken);
+                EventToken.Remove();
                 OnEvent(this, ea);
                 if (ea.Cancel)
                     return;
@@ -248,6 +269,94 @@ namespace MopidyTray
             }
             OnMessage?.Invoke(this, e);
         }
+
+        public enum PlaybackState
+        {
+            stopped,
+            playing,
+            paused
+        }
+
+        public PlaybackState State
+        {
+            get
+            {
+                var result = Execute<string>("core.playback.get_state");
+                return (PlaybackState)Enum.Parse(typeof(PlaybackState), result);
+            }
+            set
+            {
+                Execute<bool?>("core.playback.set_state", value.ToString());
+            }
+        }
+        public async Task<PlaybackState> GetStateAsync()
+        {
+            var result = await ExecuteAsync<string>("core.playback.get_state");
+            return (PlaybackState)Enum.Parse(typeof(PlaybackState), result);
+        }
+        public async Task SetStateAsync(PlaybackState value)
+        {
+            await ExecuteAsync<bool?>("core.playback.set_state", value.ToString());
+        }
+
+        public bool Muted
+        {
+            get
+            {
+                return Execute<bool>("core.mixer.get_mute");
+            }
+            set
+            {
+                Execute<bool?>("core.mixer.set_mute", value);
+            }
+        }
+        public async Task<bool> GetMutedAsync()
+        {
+            return await ExecuteAsync<bool>("core.mixer.get_mute");
+        }
+        public async Task SetMutedAsync(bool value)
+        {
+            await ExecuteAsync<bool?>("core.mixer.set_mute", value);
+        }
+
+        public int Volume
+        {
+            get
+            {
+                return Execute<int>("core.mixer.get_volume");
+            }
+            set
+            {
+                Execute<bool?>("core.mixer.set_volume", value);
+            }
+        }
+        public async Task<int> GetVolumeAsync()
+        {
+            return await ExecuteAsync<int>("core.mixer.get_volume");
+        }
+        public async Task SetVolumeAsync(int value)
+        {
+            await ExecuteAsync<bool?>("core.mixer.set_volume", value);
+        }
+
+        public void Play(Models.TlTrack track = null, int? tlid = null)
+        {
+            Execute<bool?>("core.playback.play", track, tlid);
+        }
+        public async Task PlayAsync(Models.TlTrack track = null, int? tlid = null)
+        {
+            await ExecuteAsync<bool?>("core.playback.play", track, tlid);
+        }
+
+        public void Next()
+        {
+            Execute<bool?>("core.playback.next");
+        }
+        public async Task NextAsync()
+        {
+            await ExecuteAsync<bool?>("core.playback.next");
+        }
+
 
         private void _socket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
         {

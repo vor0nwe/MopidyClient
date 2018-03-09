@@ -27,7 +27,7 @@ namespace MopidyTray
         private MopidyClient Mopidy;
         private TrayIcon trayIcon;
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private async void MainForm_Load(object sender, EventArgs e)
         {
             trayIcon = new TrayIcon(this, this.Text, Resources.mopidy_icon_gray);
 
@@ -90,6 +90,19 @@ namespace MopidyTray
                 {
                     comboCommand.Items.Add(Command);
                 }
+
+            string state = await Mopidy.ExecuteAsync<string>("core.playback.get_state");
+            SetProperty("State", state);
+            if (state == "playing" || state == "paused")
+            {
+                var result = await Mopidy.ExecuteAsync("core.playback.get_current_tl_track");
+                if (result.Type == Newtonsoft.Json.Linq.JTokenType.Object)
+                {
+                    var track = result.ToObject<dynamic>();
+                    DescribeTrack(track, true);
+                }
+            }
+            
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
