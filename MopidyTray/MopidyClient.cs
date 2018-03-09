@@ -248,18 +248,21 @@ namespace MopidyTray
             var DataToken = JToken.Parse(e.Data);
             Debug.Assert(DataToken.Type == JTokenType.Object, "Unexpected token type in message", "{0}", DataToken.Type.ToString());
             var Data = DataToken.Value<JObject>();
-            if (Data.TryGetValue("event", out var EventToken) && OnEvent != null)
+            if (Data.TryGetValue("event", out var EventToken))
             {
                 string EventName = EventToken.Value<string>();
-                EventToken.Remove();
+                Data.Remove("event");
 
                 if (DispatchEvent(EventName, DataToken))
                     return;
 
-                var ea = new EventEventArgs(EventName, DataToken);
-                OnEvent(this, ea);
-                if (ea.Cancel)
-                    return;
+                if (OnEvent != null)
+                {
+                    var ea = new EventEventArgs(EventName, DataToken);
+                    OnEvent(this, ea);
+                    if (ea.Cancel)
+                        return;
+                }
             }
             else if (Data.TryGetValue("id", out var IDToken) && IDToken.Type == JTokenType.Integer)
             {
@@ -316,7 +319,7 @@ namespace MopidyTray
         {
             if (eventName.StartsWith("track_playback_"))
             {
-                var Track = Data.Value<TlTrack>("tl_track");
+                var Track = Data.Value<JObject>("tl_track").ToObject<TlTrack>();
                 if (eventName == "track_playback_started")
                 {
                     if (OnTrackStarted != null)
@@ -464,11 +467,11 @@ namespace MopidyTray
             await ExecuteAsync<bool?>("core.playback.resume");
         }
 
-        public bool Seek(uint timePosition) 
+        public bool Seek(int timePosition) 
         {
             return Sync(SeekAsync(timePosition));
         }
-        public async Task<bool> SeekAsync(uint timePosition)
+        public async Task<bool> SeekAsync(int timePosition)
         {
             return await ExecuteAsync<bool>("core.playback.seek", timePosition);
         }
@@ -500,13 +503,13 @@ namespace MopidyTray
             return await ExecuteAsync<string>("core.playback.get_stream_title");
         }
 
-        public uint GetTimePosition()
+        public int GetTimePosition()
         {
             return Sync(GetTimePositionAsync());
         }
-        public async Task<uint> GetTimePositionAsync()
+        public async Task<int> GetTimePositionAsync()
         {
-            return await ExecuteAsync<uint>("core.playback.get_time_position");
+            return await ExecuteAsync<int>("core.playback.get_time_position");
         }
 
 
