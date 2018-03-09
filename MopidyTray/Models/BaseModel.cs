@@ -9,14 +9,15 @@ namespace MopidyTray.Models
 {
     class BaseModel
     {
+        [JsonProperty(PropertyName = "__model__")]
         public string Model {
             get
             {
-                return "__" + this.GetType().Name.ToLowerInvariant() + "__";
+                return this.GetType().Name.ToLowerInvariant();
             }
             set
             {
-                if (value != this.Model)
+                if (!value.Equals(this.Model, StringComparison.InvariantCultureIgnoreCase))
                     throw new NotSupportedException($"Model {value} does not match type {this.GetType().Name}");
             }
         }
