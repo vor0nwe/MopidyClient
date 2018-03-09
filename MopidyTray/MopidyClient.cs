@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MopidyTray.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -181,11 +182,22 @@ namespace MopidyTray
 
         public T Execute<T>(string command, params object[] parameters)
         {
-            var task = ExecuteAsync<T>(command, parameters);
+            return Sync(ExecuteAsync<T>(command, parameters));
+        }
+
+        public T Sync<T>(Task<T> task)
+        {
             task.Start();
             task.Wait();
             return task.Result;
         }
+        public void Sync(Task task)
+        {
+            task.Start();
+            task.Wait();
+            return;
+        }
+
 
         private JToken FetchCommandResult(object messageID)
         {
@@ -270,6 +282,7 @@ namespace MopidyTray
             OnMessage?.Invoke(this, e);
         }
 
+
         public enum PlaybackState
         {
             stopped,
@@ -279,15 +292,8 @@ namespace MopidyTray
 
         public PlaybackState State
         {
-            get
-            {
-                var result = Execute<string>("core.playback.get_state");
-                return (PlaybackState)Enum.Parse(typeof(PlaybackState), result);
-            }
-            set
-            {
-                Execute<bool?>("core.playback.set_state", value.ToString());
-            }
+            get => Sync(GetStateAsync());
+            set => Sync(SetStateAsync(value));
         }
         public async Task<PlaybackState> GetStateAsync()
         {
@@ -301,14 +307,8 @@ namespace MopidyTray
 
         public bool Muted
         {
-            get
-            {
-                return Execute<bool>("core.mixer.get_mute");
-            }
-            set
-            {
-                Execute<bool?>("core.mixer.set_mute", value);
-            }
+            get => Sync(GetMutedAsync());
+            set => Sync(SetMutedAsync(value));
         }
         public async Task<bool> GetMutedAsync()
         {
@@ -321,14 +321,8 @@ namespace MopidyTray
 
         public int Volume
         {
-            get
-            {
-                return Execute<int>("core.mixer.get_volume");
-            }
-            set
-            {
-                Execute<bool?>("core.mixer.set_volume", value);
-            }
+            get => Sync(GetVolumeAsync());
+            set => Sync(SetVolumeAsync(value));
         }
         public async Task<int> GetVolumeAsync()
         {
@@ -339,22 +333,103 @@ namespace MopidyTray
             await ExecuteAsync<bool?>("core.mixer.set_volume", value);
         }
 
-        public void Play(Models.TlTrack track = null, int? tlid = null)
+        public void Play(TlTrack track = null, int? tlid = null)
         {
-            Execute<bool?>("core.playback.play", track, tlid);
+            Sync(PlayAsync(track, tlid));
         }
-        public async Task PlayAsync(Models.TlTrack track = null, int? tlid = null)
+        public async Task PlayAsync(TlTrack track = null, int? tlid = null)
         {
             await ExecuteAsync<bool?>("core.playback.play", track, tlid);
         }
 
         public void Next()
         {
-            Execute<bool?>("core.playback.next");
+            Sync(NextAsync());
         }
         public async Task NextAsync()
         {
             await ExecuteAsync<bool?>("core.playback.next");
+        }
+
+        public void Previous()
+        {
+            Sync(PreviousAsync());
+        }
+        public async Task PreviousAsync()
+        {
+            await ExecuteAsync<bool?>("core.playback.previous");
+        }
+
+        public void Stop()
+        {
+            Sync(StopAsync());
+        }
+        public async Task StopAsync()
+        {
+            await ExecuteAsync<bool?>("core.playback.stop");
+        }
+
+        public void Pause()
+        {
+            Sync(PauseAsync());
+        }
+        public async Task PauseAsync()
+        {
+            await ExecuteAsync<bool?>("core.playback.pause");
+        }
+
+        public void Resume()
+        {
+            Sync(ResumeAsync());
+        }
+        public async Task ResumeAsync()
+        {
+            await ExecuteAsync<bool?>("core.playback.resume");
+        }
+
+        public bool Seek(uint timePosition) 
+        {
+            return Sync(SeekAsync(timePosition));
+        }
+        public async Task<bool> SeekAsync(uint timePosition)
+        {
+            return await ExecuteAsync<bool>("core.playback.seek", timePosition);
+        }
+
+        public TlTrack GetCurrentTlTrack()
+        {
+            return Sync(GetCurrentTlTrackAsync());
+        }
+        public async Task<TlTrack> GetCurrentTlTrackAsync()
+        {
+            return await ExecuteAsync<TlTrack>("core.playback.get_current_tl_track");
+        }
+
+        public Track GetCurrentTrack()
+        {
+            return Sync(GetCurrentTrackAsync());
+        }
+        public async Task<Track> GetCurrentTrackAsync()
+        {
+            return await ExecuteAsync<Track>("core.playback.get_current_track");
+        }
+
+        public string GetStreamTitle()
+        {
+            return Sync(GetStreamTitleAsync());
+        }
+        public async Task<string> GetStreamTitleAsync()
+        {
+            return await ExecuteAsync<string>("core.playback.get_stream_title");
+        }
+
+        public uint GetTimePosition()
+        {
+            return Sync(GetTimePositionAsync());
+        }
+        public async Task<uint> GetTimePositionAsync()
+        {
+            return await ExecuteAsync<uint>("core.playback.get_time_position");
         }
 
 
