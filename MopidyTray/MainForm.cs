@@ -95,12 +95,8 @@ namespace MopidyTray
             SetProperty("State", state);
             if (state == "playing" || state == "paused")
             {
-                var result = await Mopidy.ExecuteAsync("core.playback.get_current_tl_track");
-                if (result.Type == Newtonsoft.Json.Linq.JTokenType.Object)
-                {
-                    var track = result.ToObject<dynamic>();
-                    DescribeTrack(track, true);
-                }
+                var track = await Mopidy.GetCurrentTlTrackAsync();
+                DescribeTrack(track, true);
             }
             
         }
@@ -123,21 +119,25 @@ namespace MopidyTray
             Settings.Default.Save();
         }
 
-        private void DescribeTrack(dynamic tl_track, bool showNotification)
+        private void DescribeTrack(Models.TlTrack tl_track, bool showNotification)
         {
-            var trackInfo = TrackInfo.FromTracklistTrack(tl_track, true);
-            var track = TrackInfo.FromTracklistTrack(tl_track, false);
+            DescribeTrack(tl_track.Track, showNotification);
+        }
+        private void DescribeTrack(Models.Track track, bool showNotification)
+        {
+            var orgTrackInfo = TrackInfo.FromTrack(track, true);
+            var trackInfo = TrackInfo.FromTrack(track, false);
             state.Invoke((MethodInvoker)delegate
             {
                 state.BeginUpdate();
                 try
                 {
-                    string uri = tl_track.track.uri;
+                    string uri = track.Uri;
                     uri = Uri.UnescapeDataString(uri);
                     SetProperty("Track URI", uri);
-                    SetProperty("Track Title", trackInfo.Title, true);
-                    SetProperty("Track Artist(s)", trackInfo.Artists);
-                    SetProperty("Track Album", trackInfo.Album);
+                    SetProperty("Track Title", orgTrackInfo.Title, true);
+                    SetProperty("Track Artist(s)", orgTrackInfo.Artists);
+                    SetProperty("Track Album", orgTrackInfo.Album);
                 }
                 finally
                 {
@@ -146,12 +146,12 @@ namespace MopidyTray
 
                 if (showNotification)
                 {
-                    string Description = track.Artists;
-                    if (!string.IsNullOrWhiteSpace(track.Album))
-                        Description += Environment.NewLine + "(" + track.Album + ")";
-                    trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
+                    string Description = trackInfo.Artists;
+                    if (!string.IsNullOrWhiteSpace(trackInfo.Album))
+                        Description += Environment.NewLine + "(" + trackInfo.Album + ")";
+                    trayIcon.ShowNotification(trackInfo.Title, Description.Trim(), MessageBoxIcon.None, true);
                 }
-                var TrackLine = $"{track.Title} - {track.Artists}";
+                var TrackLine = $"{trackInfo.Title} - {trackInfo.Artists}";
                 this.Text = TrackLine + " - " + Application.ProductName;
                 if (TrackLine.Length > 63)
                     trayIcon.Text = TrackLine.Substring(0, 62) + "…";
@@ -490,77 +490,78 @@ namespace MopidyTray
                 return uri;
             }
 
+            public static TrackInfo FromTrack(Models.Track track, bool onlyOriginal)
+            {
+                var trackInfo = new TrackInfo();
+                // Track title = name
+                if (track.Name != null)
+                {
+                    trackInfo.Title = track.Name;
+                }
+                else if (!onlyOriginal)
+                {
+                    trackInfo.Title = CleanUri(track);
+                }
+
+                // Track album
+                if (track.Album != null && track.Album.Name != null)
+                {
+                    trackInfo.Album = track.Album.Name;
+                }
+
+                // Track artist(s) / composer(s)
+                var Artists = new List<string>();
+                if (track.Artists != null)
+                {
+                    foreach (var Artist in track.Artists)
+                        Artists.Add(Artist.Name);
+                }
+                else if (track.Album != null && track.Album.Artists != null)
+                {
+                    foreach (var Artist in track.Album.Artists)
+                        Artists.Add(Artist.Name);
+                }
+                else if (track.Composers != null)
+                {
+                    foreach (var composer in track.Composers)
+                        Artists.Add(composer.Name);
+                }
+                if (Artists.Count > 0)
+                {
+                    trackInfo.Artists = string.Join(", ", Artists);
+                }
+                else if (!onlyOriginal)
+                {
+                    trackInfo.Artists = CleanUri(track);
+                }
+
+                // Check if track and artists are both track.uri; if so, try to split up the uri-as-filename
+                if (!onlyOriginal && (trackInfo.Title == trackInfo.Artists))
+                {
+                    var pos = trackInfo.Title.LastIndexOf("/");
+                    if (pos > 0)
+                    {
+                        trackInfo.Album = trackInfo.Title.Substring(0, pos);
+                        trackInfo.Title = trackInfo.Title.Substring(pos + 1);
+                    }
+                }
+
+                return trackInfo;
+            }
             public static TrackInfo FromTrack(dynamic track, bool onlyOriginal)
             {
                 TrackInfo trackInfo = null;
                 if (track != null && track.__model__ == "Track")
                 {
-                    trackInfo = new TrackInfo();
-                    // Track title = name
-                    if (track.name != null)
-                    {
-                        trackInfo.Title = track.name;
-                    }
-                    else if(!onlyOriginal)
-                    {
-                        trackInfo.Title = CleanUri(track);
-                    }
-
-                    // Track album
-                    if (track.album != null && track.album.name != null)
-                    {
-                        trackInfo.Album = track.album.name;
-                    }
-
-                    // Track artist(s) / composer(s)
-                    var Artists = new List<string>();
-                    if (track.artists != null)
-                    {
-                        foreach (dynamic artist in track.artists)
-                        {
-                            string name = artist.name;
-                            Artists.Add(name);
-                        }
-                    }
-                    else if (track.album != null && track.album.artists != null)
-                    {
-                        foreach (dynamic artist in track.album.artists)
-                        {
-                            string name = artist.name;
-                            Artists.Add(name);
-                        }
-                    }
-                    else if (track.composers != null)
-                    {
-                        foreach (dynamic composer in track.composers)
-                        {
-                            string name = composer.name;
-                            Artists.Add(name);
-                        }
-                    }
-                    if (Artists.Count > 0)
-                    {
-                        trackInfo.Artists = string.Join(", ", Artists);
-                    }
-                    else if(!onlyOriginal)
-                    {
-                        trackInfo.Artists = CleanUri(track);
-                    }
-
-                    // Check if track and artists are both track.uri; if so, try to split up the uri-as-filename
-                    if (!onlyOriginal && (trackInfo.Title == trackInfo.Artists))
-                    {
-                        var pos = trackInfo.Title.LastIndexOf("/");
-                        if (pos > 0)
-                        {
-                            trackInfo.Album = trackInfo.Title.Substring(0, pos);
-                            trackInfo.Title = trackInfo.Title.Substring(pos + 1);
-                        }
-                    }
+                    // TODO:
                 }
                 return trackInfo;
             }
 
+            public static TrackInfo FromTracklistTrack(Models.TlTrack tlTrack, bool onlyOriginal)
+            {
+                return FromTrack(tlTrack.Track, onlyOriginal);
+            }
             public static TrackInfo FromTracklistTrack(dynamic tlTrack, bool onlyOriginal)
             {
                 TrackInfo trackInfo = null;
