@@ -110,6 +110,43 @@ namespace MopidyTray
             Settings.Default.Save();
         }
 
+        private void DescribeTrack(dynamic tl_track, bool showNotification)
+        {
+            var trackInfo = TrackInfo.FromTracklistTrack(tl_track, true);
+            var track = TrackInfo.FromTracklistTrack(tl_track, false);
+            state.Invoke((MethodInvoker)delegate
+            {
+                state.BeginUpdate();
+                try
+                {
+                    string uri = tl_track.track.uri;
+                    uri = Uri.UnescapeDataString(uri);
+                    SetProperty("Track URI", uri);
+                    SetProperty("Track Title", trackInfo.Title, true);
+                    SetProperty("Track Artist(s)", trackInfo.Artists);
+                    SetProperty("Track Album", trackInfo.Album);
+                }
+                finally
+                {
+                    state.EndUpdate();
+                }
+
+                if (showNotification)
+                {
+                    string Description = track.Artists;
+                    if (!string.IsNullOrWhiteSpace(track.Album))
+                        Description += Environment.NewLine + "(" + track.Album + ")";
+                    trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
+                }
+                var TrackLine = $"{track.Title} - {track.Artists}";
+                this.Text = TrackLine + " - " + Application.ProductName;
+                if (TrackLine.Length > 63)
+                    trayIcon.Text = TrackLine.Substring(0, 62) + "…";
+                else
+                    trayIcon.Text = TrackLine;
+            });
+        }
+
         private void Client_OnMessage(object sender, WebSocketSharp.MessageEventArgs e)
         {
             try
@@ -204,37 +241,7 @@ namespace MopidyTray
                             uri = data.tl_track.track.uri;
                             uri = Uri.UnescapeDataString(uri);
                             extra = uri;
-                            var trackInfo = TrackInfo.FromTracklistTrack(data.tl_track, true);
-                            var track = TrackInfo.FromTracklistTrack(data.tl_track, false);
-                            state.Invoke((MethodInvoker)delegate
-                            {
-                                state.BeginUpdate();
-                                try
-                                {
-                                    SetProperty("Track URI", uri);
-                                    SetProperty("Track Title", trackInfo.Title, true);
-                                    SetProperty("Track Artist(s)", trackInfo.Artists);
-                                    SetProperty("Track Album", trackInfo.Album);
-                                }
-                                finally
-                                {
-                                    state.EndUpdate();
-                                }
-
-                                if (eventName != "track_playback_paused" && checkShowNotifications.Checked)
-                                {
-                                    string Description = track.Artists;
-                                    if (!string.IsNullOrWhiteSpace(track.Album))
-                                        Description += Environment.NewLine + "(" + track.Album + ")";
-                                    trayIcon.ShowNotification(track.Title, Description.Trim(), MessageBoxIcon.None, true);
-                                }
-                                var TrackLine = $"{track.Title} - {track.Artists}";
-                                this.Text = TrackLine + " - " + Application.ProductName;
-                                if (TrackLine.Length > 63)
-                                    trayIcon.Text = TrackLine.Substring(0, 62) + "…";
-                                else
-                                    trayIcon.Text = TrackLine;
-                            });
+                            DescribeTrack(data.tl_track, eventName != "track_playback_paused" && checkShowNotifications.Checked);
                             // TODO
                             break;
                         case "volume_changed":
