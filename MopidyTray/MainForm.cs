@@ -491,6 +491,15 @@ namespace MopidyTray
                 uri = Uri.UnescapeDataString(uri);
                 return uri;
             }
+            private static string CleanUri(Track model)
+            {
+                if (model.Uri == null)
+                    return null;
+                string uri = model.Uri;
+                uri = uri.Substring(uri.IndexOf(':') + 1);
+                uri = Uri.UnescapeDataString(uri);
+                return uri;
+            }
 
             public static TrackInfo FromTrack(Models.Track track, bool onlyOriginal)
             {
@@ -622,6 +631,22 @@ namespace MopidyTray
                 trackPosition.Value = Position;
             else
                 trackPosition.Value = trackPosition.Maximum;
+            UpdatePositionText();
+        }
+
+        private void UpdatePositionText()
+        {
+            var Position = trackPosition.Value;
+            var PositionText = TimeSpan.FromMilliseconds(Position).ToString(@"h\:mm\:ss");
+            if (PositionText.StartsWith("0:"))
+                PositionText = PositionText.Substring(3);
+
+            var Length = trackPosition.Maximum;
+            var LengthText = TimeSpan.FromMilliseconds(Length).ToString(@"h\:mm\:ss");
+            if (LengthText.StartsWith("0:"))
+                LengthText = LengthText.Substring(3);
+
+            textPosition.Text = $"{PositionText} / {LengthText}";
         }
 
         private void AdjustTickFrequency()
@@ -646,6 +671,7 @@ namespace MopidyTray
                 trackPosition.Value = 0;
                 timerPosition.Enabled = tracking;
                 AdjustTickFrequency();
+                UpdatePositionText();
             });
         }
         private void UpdatePosition(int? maximum, int position, bool tracking)
@@ -658,6 +684,7 @@ namespace MopidyTray
                 trackPosition.Value = position;
                 timerPosition.Enabled = tracking;
                 AdjustTickFrequency();
+                UpdatePositionText();
             });
         }
 

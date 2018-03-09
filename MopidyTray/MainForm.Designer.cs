@@ -49,6 +49,8 @@
             this.buttonURL = new System.Windows.Forms.Button();
             this.trackPosition = new System.Windows.Forms.TrackBar();
             this.timerPosition = new System.Windows.Forms.Timer(this.components);
+            this.toolTipPosition = new System.Windows.Forms.ToolTip(this.components);
+            this.textPosition = new System.Windows.Forms.TextBox();
             this.ButtonPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackPosition)).BeginInit();
             this.SuspendLayout();
@@ -103,7 +105,7 @@
             this.labelCommand.Location = new System.Drawing.Point(16, 673);
             this.labelCommand.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.labelCommand.Name = "labelCommand";
-            this.labelCommand.Size = new System.Drawing.Size(76, 19);
+            this.labelCommand.Size = new System.Drawing.Size(81, 20);
             this.labelCommand.TabIndex = 4;
             this.labelCommand.Text = "Command:";
             // 
@@ -128,7 +130,7 @@
             this.comboCommand.Location = new System.Drawing.Point(115, 669);
             this.comboCommand.Margin = new System.Windows.Forms.Padding(4);
             this.comboCommand.Name = "comboCommand";
-            this.comboCommand.Size = new System.Drawing.Size(544, 25);
+            this.comboCommand.Size = new System.Drawing.Size(544, 28);
             this.comboCommand.TabIndex = 5;
             this.comboCommand.Text = global::MopidyTray.Properties.Settings.Default.Command;
             // 
@@ -138,10 +140,10 @@
             this.checkShowNotifications.AutoSize = true;
             this.checkShowNotifications.Checked = global::MopidyTray.Properties.Settings.Default.ShowNotifications;
             this.checkShowNotifications.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::MopidyTray.Properties.Settings.Default, "ShowNotifications", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkShowNotifications.Location = new System.Drawing.Point(811, 675);
+            this.checkShowNotifications.Location = new System.Drawing.Point(800, 674);
             this.checkShowNotifications.Margin = new System.Windows.Forms.Padding(4);
             this.checkShowNotifications.Name = "checkShowNotifications";
-            this.checkShowNotifications.Size = new System.Drawing.Size(139, 23);
+            this.checkShowNotifications.Size = new System.Drawing.Size(150, 24);
             this.checkShowNotifications.TabIndex = 7;
             this.checkShowNotifications.Text = "Show notifications";
             this.checkShowNotifications.UseVisualStyleBackColor = true;
@@ -220,7 +222,7 @@
             this.textURL.DataBindings.Add(new System.Windows.Forms.Binding("Text", global::MopidyTray.Properties.Settings.Default, "HostUri", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.textURL.Location = new System.Drawing.Point(115, 16);
             this.textURL.Name = "textURL";
-            this.textURL.Size = new System.Drawing.Size(726, 25);
+            this.textURL.Size = new System.Drawing.Size(726, 27);
             this.textURL.TabIndex = 1;
             this.textURL.Text = global::MopidyTray.Properties.Settings.Default.HostUri;
             // 
@@ -229,7 +231,7 @@
             this.labelURL.AutoSize = true;
             this.labelURL.Location = new System.Drawing.Point(16, 19);
             this.labelURL.Name = "labelURL";
-            this.labelURL.Size = new System.Drawing.Size(88, 19);
+            this.labelURL.Size = new System.Drawing.Size(93, 20);
             this.labelURL.TabIndex = 0;
             this.labelURL.Text = "Mopidy URL:";
             // 
@@ -249,9 +251,9 @@
             this.trackPosition.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.trackPosition.LargeChange = 5000;
-            this.trackPosition.Location = new System.Drawing.Point(16, 54);
+            this.trackPosition.Location = new System.Drawing.Point(115, 54);
             this.trackPosition.Name = "trackPosition";
-            this.trackPosition.Size = new System.Drawing.Size(603, 45);
+            this.trackPosition.Size = new System.Drawing.Size(504, 50);
             this.trackPosition.SmallChange = 500;
             this.trackPosition.TabIndex = 8;
             this.trackPosition.TickFrequency = 1000;
@@ -262,12 +264,25 @@
             this.timerPosition.Interval = 1000;
             this.timerPosition.Tick += new System.EventHandler(this.timerPosition_Tick);
             // 
+            // textPosition
+            // 
+            this.textPosition.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textPosition.Cursor = System.Windows.Forms.Cursors.Arrow;
+            this.textPosition.Location = new System.Drawing.Point(20, 57);
+            this.textPosition.Name = "textPosition";
+            this.textPosition.ReadOnly = true;
+            this.textPosition.Size = new System.Drawing.Size(89, 20);
+            this.textPosition.TabIndex = 9;
+            this.textPosition.TabStop = false;
+            this.textPosition.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            // 
             // MainForm
             // 
             this.AcceptButton = this.buttonCommand;
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(962, 716);
+            this.Controls.Add(this.textPosition);
             this.Controls.Add(this.trackPosition);
             this.Controls.Add(this.buttonURL);
             this.Controls.Add(this.labelURL);
@@ -315,6 +330,8 @@
         private System.Windows.Forms.Button buttonURL;
         private System.Windows.Forms.TrackBar trackPosition;
         private System.Windows.Forms.Timer timerPosition;
+        private System.Windows.Forms.ToolTip toolTipPosition;
+        private System.Windows.Forms.TextBox textPosition;
     }
 }
 
