@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MopidyTray.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -57,6 +58,26 @@ namespace MopidyTray
         public JToken Error { get; }
     }
 
+    class TlTrackEventArgs
+    {
+        public TlTrack Track { get; }
+
+        public TlTrackEventArgs (TlTrack track)
+        {
+            this.Track = track;
+        }
+    }
+
+    class TlTrackTimeEventArgs : TlTrackEventArgs
+    {
+        public int TimePosition { get; }
+
+        public TlTrackTimeEventArgs(TlTrack track, int timePosition) : base(track)
+        {
+            this.TimePosition = timePosition;
+        }
+    }
+
     class MopidyClient : IDisposable
     {
         private class CommandState
@@ -79,6 +100,11 @@ namespace MopidyTray
         public EventHandler<ExecuteEventArgs>               OnExecute { get; set; }
         public EventHandler<ResultEventArgs>                OnCommandResult { get; set; }
         public EventHandler<ErrorEventArgs>                 OnCommandError { get; set; }
+
+        public EventHandler<TlTrackTimeEventArgs>           OnTrackEnded { get; set; }
+        public EventHandler<TlTrackTimeEventArgs>           OnTrackPaused { get; set; }
+        public EventHandler<TlTrackTimeEventArgs>           OnTrackResumed { get; set; }
+        public EventHandler<TlTrackEventArgs>               OnTrackStarted { get; set; }
 
         public WebSocket WebSocket => _socket;
         public bool IsConnected => _socket.IsAlive;
@@ -213,8 +239,13 @@ namespace MopidyTray
             var Data = DataToken.Value<JObject>();
             if (Data.TryGetValue("event", out var EventToken) && OnEvent != null)
             {
-                var ea = new EventEventArgs(EventToken.Value<string>(), DataToken);
+                string EventName = EventToken.Value<string>();
                 EventToken.Remove();
+
+                if (DispatchEvent(EventName, DataToken))
+                    return;
+
+                var ea = new EventEventArgs(EventName, DataToken);
                 OnEvent(this, ea);
                 if (ea.Cancel)
                     return;
@@ -269,6 +300,53 @@ namespace MopidyTray
             }
             OnMessage?.Invoke(this, e);
         }
+
+        private bool DispatchEvent(string eventName, JToken Data)
+        {
+            if (eventName.StartsWith("track_playback_"))
+            {
+                var Track = Data.Value<TlTrack>("tl_track");
+                if (eventName == "track_playback_started")
+                {
+                    if (OnTrackStarted != null)
+                    {
+                        OnTrackStarted(this, new TlTrackEventArgs(Track));
+                        return true;
+                    }
+                }
+                else
+                {
+                    var TimePosition = Data.Value<int>("time_position");
+                    EventHandler<TlTrackTimeEventArgs> Handler;
+                    switch (eventName)
+                    {
+                        case "track_playback_ended":
+                            Handler = OnTrackEnded;
+                            break;
+                        case "track_playback_paused":
+                            Handler = OnTrackPaused;
+                            break;
+                        case "track_playback_resumed":
+                            Handler = OnTrackResumed;
+                            break;
+                        default:
+                            Handler = null;
+                            break;
+                    }
+                    if (Handler != null)
+                    {
+                        Handler(this, new TlTrackTimeEventArgs(Track, TimePosition));
+                        return true;
+                    }
+                }
+            }
+            else if (eventName == "")
+            {
+                // TODO: implement more events
+            }
+            return false;
+        }
+
 
         public enum PlaybackState
         {
