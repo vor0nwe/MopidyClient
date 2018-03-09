@@ -248,10 +248,14 @@
             // 
             this.trackPosition.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.trackPosition.LargeChange = 5000;
             this.trackPosition.Location = new System.Drawing.Point(16, 54);
             this.trackPosition.Name = "trackPosition";
             this.trackPosition.Size = new System.Drawing.Size(603, 45);
+            this.trackPosition.SmallChange = 500;
             this.trackPosition.TabIndex = 8;
+            this.trackPosition.TickFrequency = 1000;
+            this.trackPosition.Scroll += new System.EventHandler(this.trackPosition_Scroll);
             // 
             // timerPosition
             // 

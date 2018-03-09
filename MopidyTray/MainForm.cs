@@ -95,8 +95,10 @@ namespace MopidyTray
             SetProperty("State", state);
             if (state == "playing" || state == "paused")
             {
-                var track = await Mopidy.GetCurrentTlTrackAsync();
-                DescribeTrack(track, true);
+                var Track = await Mopidy.GetCurrentTlTrackAsync();
+                DescribeTrack(Track, true);
+                var TimePosition = await Mopidy.GetTimePositionAsync();
+                UpdatePosition(Track.Track.Length, TimePosition, state == "playing");
             }
             
         }
@@ -317,7 +319,7 @@ namespace MopidyTray
 
         private void Client_OnTrackEnded(object sender, TlTrackTimeEventArgs e)
         {
-            DescribeTrack(null, false);
+            DescribeTrack(e.Track, false);
             UpdatePosition(e.Track.Track.Length, e.TimePosition, false);
         }
 
@@ -622,15 +624,28 @@ namespace MopidyTray
                 trackPosition.Value = trackPosition.Maximum;
         }
 
+        private void AdjustTickFrequency()
+        {
+            if (trackPosition.Maximum > 4 * 60 * 60 * 1000)
+                trackPosition.TickFrequency = 30 * 60 * 1000; // each half hour
+            else if (trackPosition.Maximum > 40 * 60 * 1000)
+                trackPosition.TickFrequency = 5 * 60 * 1000; // per 5 minutes
+            else if (trackPosition.Maximum > 8 * 60 * 1000)
+                trackPosition.TickFrequency = 60 * 1000; // per 1 minute
+            else
+                trackPosition.TickFrequency = 5 * 1000;
+        }
+
         private void UpdatePosition(int? maximum, DateTime start, bool tracking)
         {
             this.Invoke((MethodInvoker)delegate
             {
                 timerPosition.Enabled = false;
+                timerPosition.Tag = start;
                 trackPosition.Maximum = maximum ?? 0;
-                trackPosition.Tag = start;
                 trackPosition.Value = 0;
                 timerPosition.Enabled = tracking;
+                AdjustTickFrequency();
             });
         }
         private void UpdatePosition(int? maximum, int position, bool tracking)
@@ -638,11 +653,19 @@ namespace MopidyTray
             this.Invoke((MethodInvoker)delegate
             {
                 timerPosition.Enabled = false;
+                timerPosition.Tag = DateTime.UtcNow.AddMilliseconds(-position);
                 trackPosition.Maximum = maximum ?? 0;
                 trackPosition.Value = position;
                 timerPosition.Enabled = tracking;
+                AdjustTickFrequency();
             });
         }
+
+        private async void trackPosition_Scroll(object sender, EventArgs e)
+        {
+            await Mopidy.SeekAsync(trackPosition.Value);
+        }
+
     }
 }
 
