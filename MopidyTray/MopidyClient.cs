@@ -539,7 +539,30 @@ namespace MopidyTray
                 {
                     // dispose managed state (managed objects).
                     Disconnect();
-                    _commands.Clear();
+                    var States = new List<CommandState>();
+                    Monitor.Enter(_commands);
+                    try
+                    {
+                        foreach(var State in _commands.Values)
+                        {
+                            switch(State.Retriever.Status)
+                            {
+                                case TaskStatus.Created:
+                                    States.Add(State);
+                                    break;
+                            }
+                        }
+                        _commands.Clear();
+                    }
+                    finally
+                    {
+                        Monitor.Exit(_commands);
+                    }
+                    foreach(var State in States)
+                    {
+                        State.Retriever.RunSynchronously();
+                    }
+                    States.Clear();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
