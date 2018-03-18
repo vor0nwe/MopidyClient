@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MopidyReport", "MopidyRepor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MopidyTray", "MopidyTray\MopidyTray.csproj", "{E4FE284C-B66F-484E-8496-28B20CE9A6B0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MopidyClientUnitTestProject", "MopidyClientUnitTestProject\MopidyClientUnitTestProject.csproj", "{B9AC87E8-5D78-4751-B734-0603D99D6E60}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{E4FE284C-B66F-484E-8496-28B20CE9A6B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4FE284C-B66F-484E-8496-28B20CE9A6B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E4FE284C-B66F-484E-8496-28B20CE9A6B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9AC87E8-5D78-4751-B734-0603D99D6E60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9AC87E8-5D78-4751-B734-0603D99D6E60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9AC87E8-5D78-4751-B734-0603D99D6E60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9AC87E8-5D78-4751-B734-0603D99D6E60}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

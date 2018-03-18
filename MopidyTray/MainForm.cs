@@ -1,18 +1,14 @@
-﻿using MopidyTray.Properties;
+﻿using MopidyTray.Models;
+using MopidyTray.Properties;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Configuration;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MopidyTray
@@ -39,36 +35,7 @@ namespace MopidyTray
 
             if (!Settings.Default.URIConfirmed)
             {
-                var InputBox = new Form
-                {
-                    Width = 500,
-                    Height = 150,
-                    FormBorderStyle = FormBorderStyle.FixedDialog,
-                    Text = this.Text,
-                    StartPosition = FormStartPosition.CenterParent,
-                    MinimizeBox = false,
-                    MaximizeBox = false,
-                    Font = this.Font
-                };
-                Label textLabel = new Label() { Left = 10, Top = 10, Text = "Mopidy URI:" };
-                TextBox textBox = new TextBox() { Left = 10, Top = textLabel.Bottom + 10, Width = InputBox.ClientSize.Width - 20, Text = Settings.Default.HostUri };
-                Button confirmation = new Button() { Text = "OK", Left = InputBox.ClientSize.Width - 220, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.OK };
-                Button cancel = new Button() { Text = "Cancel", Left = InputBox.ClientSize.Width - 110, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.Cancel };
-                confirmation.Click += (lsender, le) => { InputBox.Close(); };
-                cancel.Click += (lsender, le) => { InputBox.Close(); };
-                InputBox.Controls.Add(textBox);
-                InputBox.Controls.Add(confirmation);
-                InputBox.Controls.Add(cancel);
-                InputBox.Controls.Add(textLabel);
-                InputBox.AcceptButton = confirmation;
-                InputBox.CancelButton = cancel;
-
-                if (InputBox.ShowDialog() == DialogResult.OK)
-                {
-                    Settings.Default.HostUri = textBox.Text;
-                    Settings.Default.URIConfirmed = true;
-                    Settings.Default.Save();
-                }
+                ConfirmURI();
             }
 
             ReconnectMopidy(Settings.Default.HostUri);
@@ -101,6 +68,40 @@ namespace MopidyTray
                 UpdatePosition(Track.Track.Length, TimePosition, state == "playing");
             }
             
+        }
+
+        private void ConfirmURI()
+        {
+            var InputBox = new Form
+            {
+                Width = 500,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = this.Text,
+                StartPosition = FormStartPosition.CenterParent,
+                MinimizeBox = false,
+                MaximizeBox = false,
+                Font = this.Font
+            };
+            Label textLabel = new Label() { Left = 10, Top = 10, Text = "Mopidy URI:" };
+            TextBox textBox = new TextBox() { Left = 10, Top = textLabel.Bottom + 10, Width = InputBox.ClientSize.Width - 20, Text = Settings.Default.HostUri };
+            Button confirmation = new Button() { Text = "OK", Left = InputBox.ClientSize.Width - 220, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.OK };
+            Button cancel = new Button() { Text = "Cancel", Left = InputBox.ClientSize.Width - 110, Width = 100, Top = textBox.Bottom + 10, DialogResult = DialogResult.Cancel };
+            confirmation.Click += (lsender, le) => { InputBox.Close(); };
+            cancel.Click += (lsender, le) => { InputBox.Close(); };
+            InputBox.Controls.Add(textBox);
+            InputBox.Controls.Add(confirmation);
+            InputBox.Controls.Add(cancel);
+            InputBox.Controls.Add(textLabel);
+            InputBox.AcceptButton = confirmation;
+            InputBox.CancelButton = cancel;
+
+            if (InputBox.ShowDialog() == DialogResult.OK)
+            {
+                Settings.Default.HostUri = textBox.Text;
+                Settings.Default.URIConfirmed = true;
+                Settings.Default.Save();
+            }
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -166,12 +167,15 @@ namespace MopidyTray
         {
             try
             {
+                var jToken = JToken.Parse(e.Data);
+                Debug.Assert(jToken.Type == JTokenType.Object, $"Unexpected token type: {jToken.Type}");
+                var jData = (JObject)jToken;
                 dynamic data = JsonConvert.DeserializeObject(e.Data);
 
-                if (data.@event != null)
+                if (jData.TryGetValue("event", out var EventToken))
                 {
                     string uri;
-                    string eventName = data.@event;
+                    string eventName = EventToken.Value<string>();
                     string extra = "";
                     switch (eventName)
                     {
