@@ -119,6 +119,7 @@ namespace MopidyTray
             }
             Commands.Sort();
             Settings.Default["Commands"] = string.Join(Environment.NewLine, Commands);
+            Settings.Default.MainForm_Location = this.Location;
             Settings.Default.Save();
         }
 

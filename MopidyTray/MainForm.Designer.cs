@@ -293,9 +293,11 @@
             this.Controls.Add(this.labelCommand);
             this.Controls.Add(this.checkShowNotifications);
             this.Controls.Add(this.state);
+            this.DataBindings.Add(new System.Windows.Forms.Binding("Location", global::MopidyTray.Properties.Settings.Default, "MainForm_Location", true, System.Windows.Forms.DataSourceUpdateMode.Never));
             this.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.KeyPreview = true;
+            this.Location = global::MopidyTray.Properties.Settings.Default.MainForm_Location;
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "MainForm";
             this.Text = "Mopidy client";
