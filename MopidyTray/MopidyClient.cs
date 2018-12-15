@@ -165,8 +165,7 @@ namespace MopidyTray
 
             // Prepare a task to retrieve the result, and add that task to the _commands dictionary
             var FetchResult = new Task<JToken>(FetchCommandResult, CommandID);
-            Monitor.Enter(_commands);
-            try
+            lock(_commands)
             {
                 _commands.Add(CommandID, new CommandState {
                     Retriever = FetchResult,
@@ -174,25 +173,16 @@ namespace MopidyTray
                     Error = null,
                 });
             }
-            finally
-            {
-                Monitor.Exit(_commands);
-            }
             // Now wait for the task to complete (it will be started when the response comes in)
             var Result = await FetchResult;
 
             // Remove ID from _commandResults if we timed out
             if (Result == null)
             {
-                Monitor.Enter(_commands);
-                try
+                lock(_commands)
                 {
                     if (_commands.ContainsKey(CommandID))
                         _commands.Remove(CommandID);
-                }
-                finally
-                {
-                    Monitor.Exit(_commands);
                 }
             }
 
@@ -226,8 +216,7 @@ namespace MopidyTray
 
         private JToken FetchCommandResult(object messageID)
         {
-            Monitor.Enter(_commands);
-            try
+            lock(_commands)
             {
                 var CommandState = _commands[(int)messageID];
                 _commands.Remove((int)messageID);
@@ -236,10 +225,6 @@ namespace MopidyTray
                     throw new Exception(CommandState.Error.ToString());
                 else
                     return CommandState.Result;
-            }
-            finally
-            {
-                Monitor.Exit(_commands);
             }
         }
 
@@ -270,14 +255,9 @@ namespace MopidyTray
                 // check if we sent that CommandID; if so, handle the result; if not, trigger the appropriate event
                 CommandState State;
                 bool Found = false;
-                Monitor.Enter(_commands);
-                try
+                lock(_commands)
                 {
                     Found = _commands.TryGetValue(CommandID, out State);
-                }
-                finally
-                {
-                    Monitor.Exit(_commands);
                 }
                 if (Data.TryGetValue("result", out var ResultToken))
                 {
@@ -540,8 +520,7 @@ namespace MopidyTray
                     // dispose managed state (managed objects).
                     Disconnect();
                     var States = new List<CommandState>();
-                    Monitor.Enter(_commands);
-                    try
+                    lock(_commands)
                     {
                         foreach(var State in _commands.Values)
                         {
@@ -553,10 +532,6 @@ namespace MopidyTray
                             }
                         }
                         _commands.Clear();
-                    }
-                    finally
-                    {
-                        Monitor.Exit(_commands);
                     }
                     foreach(var State in States)
                     {
