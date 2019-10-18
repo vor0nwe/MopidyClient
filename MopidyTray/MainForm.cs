@@ -23,7 +23,7 @@ namespace MopidyTray
         private MopidyClient Mopidy;
         private TrayIcon trayIcon;
 
-        private async void MainForm_Load(object sender, EventArgs e)
+        private void MainForm_Load(object sender, EventArgs e)
         {
             trayIcon = new TrayIcon(this, this.Text, Resources.mopidy_icon_gray);
 
@@ -37,8 +37,6 @@ namespace MopidyTray
             {
                 ConfirmURI();
             }
-
-            ReconnectMopidy(Settings.Default.HostUri);
 
             var prop = new SettingsProperty("Commands")
             {
@@ -58,16 +56,7 @@ namespace MopidyTray
                     comboCommand.Items.Add(Command);
                 }
 
-            string state = await Mopidy.ExecuteAsync<string>("core.playback.get_state");
-            SetProperty("State", state);
-            if (state == "playing" || state == "paused")
-            {
-                var Track = await Mopidy.GetCurrentTlTrackAsync();
-                DescribeTrack(Track, true);
-                var TimePosition = await Mopidy.GetTimePositionAsync();
-                UpdatePosition(Track.Track.Length, TimePosition, state == "playing");
-            }
-            
+            timerStart.Enabled = true;            
         }
 
         private void ConfirmURI()
@@ -106,7 +95,7 @@ namespace MopidyTray
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            if (Mopidy.IsConnected)
+            if (Mopidy?.IsConnected ?? false)
                 Mopidy.Disconnect();
             
             trayIcon.Dispose();
@@ -698,6 +687,22 @@ namespace MopidyTray
             await Mopidy.SeekAsync(trackPosition.Value);
         }
 
+        private async void timerStart_Tick(object sender, EventArgs e)
+        {
+            timerStart.Enabled = false;
+
+            ReconnectMopidy(Settings.Default.HostUri);
+
+            string state = await Mopidy.ExecuteAsync<string>("core.playback.get_state");
+            SetProperty("State", state);
+            if (state == "playing" || state == "paused")
+            {
+                var Track = await Mopidy.GetCurrentTlTrackAsync();
+                DescribeTrack(Track, true);
+                var TimePosition = await Mopidy.GetTimePositionAsync();
+                UpdatePosition(Track.Track.Length, TimePosition, state == "playing");
+            }
+        }
     }
 }
 

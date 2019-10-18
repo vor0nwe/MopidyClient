@@ -51,6 +51,7 @@
             this.timerPosition = new System.Windows.Forms.Timer(this.components);
             this.toolTipPosition = new System.Windows.Forms.ToolTip(this.components);
             this.textPosition = new System.Windows.Forms.TextBox();
+            this.timerStart = new System.Windows.Forms.Timer(this.components);
             this.ButtonPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackPosition)).BeginInit();
             this.SuspendLayout();
@@ -276,6 +277,11 @@
             this.textPosition.TabStop = false;
             this.textPosition.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
+            // timerStart
+            // 
+            this.timerStart.Interval = 1;
+            this.timerStart.Tick += new System.EventHandler(this.timerStart_Tick);
+            // 
             // MainForm
             // 
             this.AcceptButton = this.buttonCommand;
@@ -334,6 +340,7 @@
         private System.Windows.Forms.Timer timerPosition;
         private System.Windows.Forms.ToolTip toolTipPosition;
         private System.Windows.Forms.TextBox textPosition;
+        private System.Windows.Forms.Timer timerStart;
     }
 }
 
